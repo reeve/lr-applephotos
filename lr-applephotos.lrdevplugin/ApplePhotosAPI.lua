@@ -15,7 +15,7 @@ local function flattenFolderTree(tree)
             if next(record.c) ~= nil then
                 local children = flattenFolderTree(record.c)
                 for _, child in ipairs(children) do
-                    table.insert(flattenedList, { title = "--" .. child.title, value = child.value })
+                    table.insert(flattenedList, { title = "  " .. child.title, value = child.value })
                 end
             end
         end

@@ -53,6 +53,22 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
     return {
         {
             title = "Destination Album",
+            synopsis = function(props)
+                if props.exportToExistingAlbum then
+                    local existingAlbums = props.albumMap[props.selectedFolder]
+                    local existingAlbumID = props.selectedAlbum
+                    local existingAlbumName = nil
+                    for _, value in ipairs(existingAlbums) do
+                        if value.value == existingAlbumID then
+                            existingAlbumName = value.title
+                            break
+                        end
+                    end
+                    return existingAlbumName
+                else
+                    return props.newAlbumName
+                end
+            end,
             f:column {
                 spacing = f:control_spacing(),
 
