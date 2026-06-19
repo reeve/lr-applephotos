@@ -137,20 +137,28 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
             or LOC "$$$/ApplePhotos/Progress/One=Exporting one photo to Apple Photos",
     }
 
+    local exportAlbumID = "root"
+
+    if not exportSettings.exportToExistingAlbum then
+        exportAlbumID = ApplePhotosAPI.createFolder(exportSettings.newAlbumName, exportSettings.selectedFolder)
+    else
+        exportAlbumID = exportSettings.selectedAlbum
+    end
+
     local exportedPhotoIds = {}
 
     for i, rendition in exportContext:renditions { stopIfCanceled = true } do
-        progressScope:setPortionComplete((i - 1) / nPhotos)
+        -- progressScope:setPortionComplete((i - 1) / nPhotos)
         if not rendition.wasSkipped then
             local success, pathOrMessage = rendition:waitForRender()
-            progressScope:setPortionComplete((i - 0.5) / nPhotos)
+            -- progressScope:setPortionComplete((i - 0.5) / nPhotos)
             if progressScope:isCanceled() then break end
             if success then
-                ApplePhotosAPI.importPhoto(exportSettings.selectedAlbum, pathOrMessage, exportSettings)
+                ApplePhotosAPI.importPhoto(exportAlbumID, pathOrMessage, exportSettings)
             end
         end
     end
-    progressScope:done()
+    -- progressScope:done()
 end
 
 ---------------

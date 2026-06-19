@@ -3,11 +3,11 @@ set jsonLib to load script targetFile
 
 tell application "Photos"
     set children to my recurseFolders(application "Photos")
-    set tree to {{n: "Root", i: "root", c: children, t: "f"}}
+    set response to {{n: "Root", i: "root", c: children, t: "f"}}
     tell jsonLib
-        set foo to jsonLib's convertASToJSON:tree saveTo:missing value
+        set jsonResponse to jsonLib's convertASToJSON:response saveTo:missing value
     end tell
-    return foo
+    return jsonResponse
 end tell
 
 on recurseFolders(currentContainer)

@@ -130,3 +130,37 @@ function ApplePhotosAPI.importPhoto(albumId, photoPath, propertyTable)
     -- end
     -- )
 end
+
+function ApplePhotosAPI.createFolder(albumName, folderId, propertyTable)
+    -- must be called from with a task
+    logger:info("createFolder | " .. albumName .. " | " .. folderId)
+
+    local scriptPath =
+    '/Users/adamreeve/src/lr-applephotos/lr-applephotos.lrdevplugin/applescript/CreateAlbum.applescript'
+    local tempOutputFile = LrFileUtils.chooseUniqueFileName(os.tmpname())
+    logger:info(tempOutputFile)
+
+    local command = string.format("osascript '%s' '%s' '%s' > '%s'", scriptPath, albumName, folderId, tempOutputFile)
+    logger:info(command)
+
+    local resultCode = LrTasks.execute(command)
+    logger:info(resultCode)
+
+    if resultCode == 0 then
+        -- 5. Read the captured string from the file
+        if LrFileUtils.exists(tempOutputFile) then
+            local capturedOutput = LrFileUtils.readFile(tempOutputFile)
+
+            -- Strip trailing newlines often added by the terminal output
+            capturedOutput = string.gsub(capturedOutput, "%s+$", "")
+
+            -- Your captured string is ready!
+            logger:info("AppleScript Output: " .. capturedOutput)
+
+            local result = json.decode(capturedOutput)
+            local newAlbumID = result.i
+
+            return newAlbumID
+        end
+    end
+end
