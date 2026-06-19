@@ -14,6 +14,12 @@ exportServiceProvider.allowColorSpaces = { 'sRGB' }
 exportServiceProvider.hidePrintResolution = true
 exportServiceProvider.canExportVideo = false
 
+exportServiceProvider.exportPresetFields = {
+    { key = 'selectedFolder',        default = nil },
+    { key = 'selectedAlbum',         default = nil },
+    { key = 'exportToExistingAlbum', default = false },
+    { key = 'newAlbumName',          default = '' },
+}
 
 local function updateCantExportBecause(propertyTable)
     local validAlbumSpecified = (propertyTable.selectedAlbum ~= nil and
@@ -109,8 +115,15 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
                                     albumList = {}
                                     propertyTable.exportToExistingAlbum = false
                                 else
-                                    propertyTable.selectedAlbum = albumList[1].value
                                     propertyTable.exportToExistingAlbum = true
+                                    -- try to find the previously set element in the new list (this is mainly for preset loading)
+                                    for _, value in pairs(albumList) do
+                                        if value.value == propertyTable.selectedAlbum then
+                                            return albumList
+                                        end
+                                    end
+                                    -- didn't find a match so reset to first value
+                                    propertyTable.selectedAlbum = albumList[1].value
                                 end
                                 return albumList
                             end,
