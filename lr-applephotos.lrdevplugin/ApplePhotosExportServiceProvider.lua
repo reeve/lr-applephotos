@@ -6,6 +6,13 @@ local logger = import 'LrLogger' ('ApplePhotosExportServiceProvider'):enable("lo
 local bind = LrView.bind
 local share = LrView.share
 
+local MSG_SCANNING = "Retrieving folder structure from Apple Photos..."
+local MSG_NOT_SELECTED = "You haven't specified a destination album"
+local MSG_ROOT_EXPLANATION = "Place images in an album which is not inside any folder"
+local MSG_FOLDER_EXPLANATION = "Place images in an album inside this folder"
+local MSG_ALBUM_NAME_LENGTH = "Album name limited to 100 characters"
+local MAX_ALBUM_NAME_LEN_BYTES = 120
+
 local exportServiceProvider = {}
 
 exportServiceProvider.hideSections = { 'exportLocation', 'video' }
@@ -21,16 +28,30 @@ exportServiceProvider.exportPresetFields = {
     { key = 'newAlbumName',          default = '' },
 }
 
-local function updateCantExportBecause(propertyTable)
+local function updateCantExportAndHelptext(propertyTable)
+    -- if we're scanning flag that and stop
+    if propertyTable.scanningFolders then
+        propertyTable.LR_cantExportBecause = MSG_SCANNING
+        propertyTable.helpText = MSG_SCANNING
+        return
+    end
+
+    -- not scanning, folder dropdown must be populated with at least root, set helptext
+    if propertyTable.selectedFolder == 'root' then
+        propertyTable.helpText = MSG_ROOT_EXPLANATION
+    else
+        propertyTable.helpText = MSG_FOLDER_EXPLANATION
+    end
+
+    -- check album selection to decide whether export is allowed
     local validAlbumSpecified = (propertyTable.selectedAlbum ~= nil and
             propertyTable.exportToExistingAlbum) or
         (propertyTable.newAlbumName ~= nil and
             propertyTable.newAlbumName ~= "" and
             not propertyTable.exportToExistingAlbum)
 
-
     if not validAlbumSpecified then
-        propertyTable.LR_cantExportBecause = "You haven't specified a destination album."
+        propertyTable.LR_cantExportBecause = MSG_NOT_SELECTED
         return
     end
 
@@ -40,14 +61,16 @@ end
 function exportServiceProvider.startDialog(propertyTable)
     logger:info("startDialog")
 
-    propertyTable:addObserver('selectedAlbum', function() updateCantExportBecause(propertyTable) end)
-    propertyTable:addObserver('exportToExistingAlbum', function() updateCantExportBecause(propertyTable) end)
-    propertyTable:addObserver('newAlbumName', function() updateCantExportBecause(propertyTable) end)
-    updateCantExportBecause(propertyTable)
+    propertyTable:addObserver('selectedAlbum', function() updateCantExportAndHelptext(propertyTable) end)
+    propertyTable:addObserver('exportToExistingAlbum', function() updateCantExportAndHelptext(propertyTable) end)
+    propertyTable:addObserver('newAlbumName', function() updateCantExportAndHelptext(propertyTable) end)
+    propertyTable:addObserver('scanningFolders', function() updateCantExportAndHelptext(propertyTable) end)
+    updateCantExportAndHelptext(propertyTable)
 
     propertyTable.folderList = {}
     propertyTable.albumMap = {}
     propertyTable.exportToExistingAlbum = true
+    propertyTable.scanningFolders = false
 
     ApplePhotosAPI.updateFolderStructure(propertyTable)
 end
@@ -84,15 +107,17 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
                         title = "Folder:",
                         alignment = "right",
                         width = share 'destinationLeftTitle',
+                        enabled = LrBinding.negativeOfKey 'scanningFolders',
                     },
                     f:popup_menu {
                         value = bind 'selectedFolder',
-                        items = bind 'folderList'
+                        items = bind 'folderList',
+                        enabled = LrBinding.negativeOfKey 'scanningFolders'
                     },
                     f:static_text {
-                        title = "Albums not inside any folder",
+                        title = bind 'helpText',
                         alignment = "left",
-                        visible = LrBinding.keyEquals('selectedFolder', 'root'),
+                        width_in_chars = 60
                     }
                 },
                 f:row {
@@ -101,6 +126,7 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
                         title = "Album:",
                         alignment = "right",
                         width = share 'destinationLeftTitle',
+                        enabled = LrBinding.negativeOfKey 'scanningFolders'
                     },
                     f:popup_menu {
                         value = bind 'selectedAlbum',
@@ -113,6 +139,7 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
                                 local albumList = albumMap[selectedFolder]
                                 if albumList == nil then
                                     albumList = {}
+                                    propertyTable.selectedAlbum = nil
                                     propertyTable.exportToExistingAlbum = false
                                 else
                                     propertyTable.exportToExistingAlbum = true
@@ -136,12 +163,25 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
                     f:checkbox {
                         title = "Create New Album:",
                         value = LrBinding.negativeOfKey 'exportToExistingAlbum',
+                        enabled = LrBinding.negativeOfKey 'scanningFolders'
+
                     },
                     f:edit_field {
                         value = bind 'newAlbumName',
                         immediate = true,
                         width_in_chars = 30,
-                        enabled = LrBinding.negativeOfKey 'exportToExistingAlbum'
+                        enabled = LrBinding.negativeOfKey 'exportToExistingAlbum',
+                        validate = function(view, value)
+                            local message = nil
+                            local result = true
+
+                            if #value > MAX_ALBUM_NAME_LEN_BYTES then
+                                message = MSG_ALBUM_NAME_LENGTH
+                                result = false
+                            end
+
+                            return result, value, message
+                        end
                     },
                 }
             },

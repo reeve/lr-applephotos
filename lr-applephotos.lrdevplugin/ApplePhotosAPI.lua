@@ -54,6 +54,8 @@ end
 function ApplePhotosAPI.updateFolderStructure(propertyTable)
     logger:info("updateFolderStructure")
 
+    propertyTable.scanningFolders = true
+
     -- LrTasks.execute must run inside an asynchronous task context
     LrTasks.startAsyncTask(function()
         -- 1. Create a safe temporary file path for the output
@@ -107,6 +109,8 @@ function ApplePhotosAPI.updateFolderStructure(propertyTable)
         if LrFileUtils.exists(tempOutputFile) then
             LrFileUtils.delete(tempOutputFile)
         end
+
+        propertyTable.scanningFolders = false
     end
     )
 end
