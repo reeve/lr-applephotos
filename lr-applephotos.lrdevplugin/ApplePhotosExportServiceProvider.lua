@@ -208,6 +208,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
 
     local exportAlbumID = "root"
     if not exportSettings.exportToExistingAlbum then
+        ---@diagnostic disable-next-line: cast-local-type
         exportAlbumID = ApplePhotosAPI.createAlbum(exportSettings.newAlbumName, exportSettings.selectedFolder)
         if exportAlbumID == nil then
             logger:error("Unable to create export album")
