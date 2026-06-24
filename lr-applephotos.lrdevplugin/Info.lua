@@ -5,18 +5,13 @@ return {
 
     LrToolkitIdentifier = 'com.adamreeve.lightroom.lr-applephotos',
 
-    LrPluginName = "Apple Photos",
-
-    LrExportMenuItems = {
-        title = "Get Folders",
-        file = "EvalEntrypoint.lua",
-    },
+    LrPluginName = "Export and Publish to Apple Photos",
 
     LrExportServiceProvider = {
         title = "Apple Photos",
         file = 'ApplePhotosExportServiceProvider.lua',
     },
 
-    VERSION = { major = 0, minor = 1, revision = 0, build = 0, },
+    VERSION = { major = 1, minor = 0, revision = 0, build = 0, },
 
 }

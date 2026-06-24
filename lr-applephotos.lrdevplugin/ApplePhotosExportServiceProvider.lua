@@ -72,7 +72,7 @@ function exportServiceProvider.startDialog(propertyTable)
     propertyTable.exportToExistingAlbum = true
     propertyTable.scanningFolders = false
 
-    ApplePhotosAPI.updateFolderStructure(propertyTable)
+    ApplePhotosAPI.queryFolderStructure(propertyTable)
 end
 
 function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
@@ -193,13 +193,13 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
 end
 
 function exportServiceProvider.processRenderedPhotos(functionContext, exportContext)
+    logger:info("Starting export")
     local exportSession = exportContext.exportSession
     local exportSettings = assert(exportContext.propertyTable)
 
     local nPhotos = exportSession:countRenditions()
 
     -- Set progress title.
-
     local progressScope = exportContext:configureProgress {
         title = nPhotos > 1
             and LOC("$$$/ApplePhotos/Progress=Exporting ^1 photos to Apple Photos", nPhotos)
@@ -207,23 +207,29 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
     }
 
     local exportAlbumID = "root"
-
     if not exportSettings.exportToExistingAlbum then
-        exportAlbumID = ApplePhotosAPI.createFolder(exportSettings.newAlbumName, exportSettings.selectedFolder)
+        exportAlbumID = ApplePhotosAPI.createAlbum(exportSettings.newAlbumName, exportSettings.selectedFolder)
+        if exportAlbumID == nil then
+            logger:error("Unable to create export album")
+            return
+        end
     else
         exportAlbumID = exportSettings.selectedAlbum
     end
 
+    logger:info("Ready to export to: " .. exportAlbumID)
+
     local exportedPhotoIds = {}
 
-    for i, rendition in exportContext:renditions { stopIfCanceled = true } do
+    for _, rendition in exportContext:renditions { stopIfCanceled = true } do
         -- progressScope:setPortionComplete((i - 1) / nPhotos)
         if not rendition.wasSkipped then
             local success, pathOrMessage = rendition:waitForRender()
             -- progressScope:setPortionComplete((i - 0.5) / nPhotos)
             if progressScope:isCanceled() then break end
             if success then
-                ApplePhotosAPI.importPhoto(exportAlbumID, pathOrMessage, exportSettings)
+                local imageID = ApplePhotosAPI.importPhoto(exportAlbumID, pathOrMessage, exportSettings)
+                logger:info("Import OK: " .. imageID)
             end
         end
     end

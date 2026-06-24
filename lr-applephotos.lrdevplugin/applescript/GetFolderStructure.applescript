@@ -1,5 +1,9 @@
-set targetFile to POSIX file "/Users/adamreeve/src/lr-applephotos/lr-applephotos.lrdevplugin/applescript/JSONlib.scpt"
-set jsonLib to load script targetFile
+tell application "Finder"
+    -- Get the parent folder of the running script
+    set currentDirectory to container of (path to me) as text
+end tell
+set jsonLibPath to currentDirectory & "JSONlib.scpt"
+set jsonLib to load script file jsonLibPath
 
 tell application "Photos"
     set children to my recurseFolders(application "Photos")
