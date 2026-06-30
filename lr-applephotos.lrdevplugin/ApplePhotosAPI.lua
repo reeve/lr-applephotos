@@ -143,13 +143,13 @@ end
 
 ------
 -- Imports a single photo. Takes the albumId to add it to, and the path of the image to import.
-function ApplePhotosAPI.importPhoto(albumId, photoPath, propertyTable)
+function ApplePhotosAPI.importPhoto(albumId, photoPath)
     -- must be called from with a task
     logger:info("importPhoto | " .. albumId .. " | " .. photoPath)
 
     local resultCode, result = invokeScript("ImportPhoto", albumId, photoPath)
 
-    if resultCode == 0 and result ~= nil then
+    if resultCode == 0 and result ~= nil and next(result) ~= nil then
         local newImageID = result.i
         return newImageID
     else
@@ -160,17 +160,33 @@ end
 
 ------
 -- Creates a new Album in the Photos hierachy. Name is (seemingly) any string, folderId should have previously been obtained via queryFolderStructure().
-function ApplePhotosAPI.createAlbum(albumName, folderId, propertyTable)
+function ApplePhotosAPI.createAlbum(albumName, folderId)
     -- must be called from with a task
     logger:info("createAlbum | " .. albumName .. " | " .. folderId)
 
     local resultCode, result = invokeScript("CreateAlbum", albumName, folderId)
 
-    if resultCode == 0 and result ~= nil then
+    if resultCode == 0 and result ~= nil and next(result) ~= nil then
         local newAlbumID = result.i
         return newAlbumID
     else
         logger:error("Error creating new album: " .. resultCode)
         return nil
+    end
+end
+
+------
+-- Checks for existance of an album by it's ID. If existant, returns the current name. If not, returns false.
+function ApplePhotosAPI.checkAlbumExists(albumID)
+    -- must be called from with a task
+    logger:info("checkAlbumExists | " .. albumID)
+
+    local resultCode, result = invokeScript("CheckAlbumExists", albumID)
+
+    if resultCode == 0 and result ~= nil and next(result) ~= nil then
+        local currentAlbumName = result.n
+        return currentAlbumName
+    else
+        return false
     end
 end
