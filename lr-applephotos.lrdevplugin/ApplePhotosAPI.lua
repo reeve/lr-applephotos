@@ -10,6 +10,8 @@ local json = require "json"
 
 local PLUGIN_PATH = _PLUGIN.path
 
+local SWIFT_BIN_NAME = "PhotosProxyApp.app"
+
 ApplePhotosAPI = {}
 
 -- TODO: move this view specific logic into the view class?
@@ -60,29 +62,13 @@ local function albumsByFolder(tree)
     return flattenedMap
 end
 
-------
--- Runs an applescript file and captures the output, parsing it as json and returning the result code and response data structrue as a tuple.
--- Returns negative result code if the invocation mechanism failed (vs positive result code for error reported by applescript)
-local function invokeScript(scriptName, ...)
-    local scriptPath = LrPathUtils.standardizePath(LrPathUtils.addExtension(
-        LrPathUtils.child(LrPathUtils.child(PLUGIN_PATH, "applescript"), scriptName), "applescript"))
-
-    if not LrFileUtils.isReadable(scriptPath) then
-        logger.error("Applescript file [" .. scriptPath .. "] is not existent/readable")
-        return -1, nil
-    end
-
+local function genericInvoke(name, commandFormatter)
     local tempOutputFile = LrFileUtils.chooseUniqueFileName(LrPathUtils.child(LrPathUtils.getStandardFilePath('temp'),
-        "tmp-" .. scriptName))
+        "tmp-" .. name))
 
-    -- Build and execute the command line with osascript
-    local args = table.concat({ ... }, "' '")
-    if args ~= "" then
-        args = "'" .. args .. "'"
-    end
-    local command = string.format("osascript '%s' %s > '%s'", scriptPath, args, tempOutputFile)
+    local command = commandFormatter(name, tempOutputFile)
+
     logger:info("Invoking command: " .. command)
-
     local resultCode = LrTasks.execute(command)
     local result = nil
 
@@ -97,7 +83,7 @@ local function invokeScript(scriptName, ...)
             result = json.decode(capturedOutput)
         end
     else
-        logger:error("AppleScript execution failed with code: " .. tostring(resultCode))
+        logger:error("Command execution failed with code: " .. tostring(resultCode))
     end
 
     if LrFileUtils.exists(tempOutputFile) then
@@ -105,6 +91,68 @@ local function invokeScript(scriptName, ...)
     end
 
     return resultCode, result
+end
+
+------
+-- Runs an applescript file and captures the output, parsing it as json and returning the result code and response data structrue as a tuple.
+-- Returns negative result code if the invocation mechanism failed (vs positive result code for error reported by applescript)
+local function invokeScript(scriptName, ...)
+    local scriptPath = LrPathUtils.standardizePath(LrPathUtils.addExtension(
+        LrPathUtils.child(LrPathUtils.child(PLUGIN_PATH, "applescript"), scriptName), "applescript"))
+
+    if not LrFileUtils.isReadable(scriptPath) then
+        logger:error("Applescript file [" .. scriptPath .. "] is not existent/readable")
+        return -1, nil
+    end
+
+    local args = table.concat({ ... }, "' '")
+    if args ~= "" then
+        args = "'" .. args .. "'"
+    end
+
+    return genericInvoke(scriptName, function(_, tempOutputFile)
+        return string.format("osascript '%s' %s > %s", scriptPath, args, tempOutputFile)
+    end)
+end
+
+local function invokeSwift(command, ...)
+    local binPath = LrPathUtils.child(
+        "/Users/adamreeve/Library/Developer/Xcode/DerivedData/PhotosProxyApp-eezaswzlqeohwtcyotixthdhhjdm/Build/Products/Debug",
+        SWIFT_BIN_NAME)
+
+    if not LrFileUtils.isReadable(binPath) then
+        logger:error("Swift helper file [" .. binPath .. "] is not existent/readable")
+        return -1, nil
+    end
+
+    local args = table.concat({ ... }, "' '")
+    if args ~= "" then
+        args = "'" .. args .. "'"
+    end
+
+    return genericInvoke(command, function(_, tempOutputFile)
+        return string.format("open -n -W --stdout %s --stderr %s -a %s --args %s --json-response %s", tempOutputFile,
+            tempOutputFile, binPath, command, args)
+    end)
+end
+
+local function array_difference(array1, array2)
+    local lookup = {}
+    local diff = {}
+
+    -- Map elements of array2 as keys for fast O(1) lookups
+    for _, value in ipairs(array2) do
+        lookup[value] = true
+    end
+
+    -- Check if elements from array1 are missing in array2
+    for _, value in ipairs(array1) do
+        if not lookup[value] then
+            table.insert(diff, value)
+        end
+    end
+
+    return diff
 end
 
 ------
@@ -189,4 +237,28 @@ function ApplePhotosAPI.checkAlbumExists(albumID)
     else
         return false
     end
+end
+
+------
+-- Deletes images, referenced by their ID. The image will be deleted from the library entirely, regardless of which albums it is in.
+-- Returns a list of the IDs successfully deleted.
+-- NOTE: Photos will prompt the user for confirmation on each execution, this is unavoidable.
+function ApplePhotosAPI.deleteImages(imageIDs)
+    -- must be called from with a task
+    logger:info("deleteImages | " .. table.concat(imageIDs, " "))
+
+    local resultCode, result = invokeSwift("delete", unpack(imageIDs))
+
+    if resultCode == 0 and result ~= nil and result.success then
+        -- all good, just figure out missing files
+        local deleted = array_difference(imageIDs, result.missingIDs)
+        logger:info("Deleted: " .. table.concat(deleted, " "))
+        return deleted
+    elseif result ~= nil and result.error ~= nil then
+        logger:error("Error deleting images: " .. result.error)
+    else
+        logger:error("Unknown error")
+    end
+
+    return {}
 end

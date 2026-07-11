@@ -336,13 +336,22 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
     local exportedPhotoIds = {}
 
     for _, rendition in exportContext:renditions { stopIfCanceled = true } do
-        logger:info("Exporting " .. rendition.photo.localIdentifier)
+        logger:info("Processing image: " .. rendition.photo.localIdentifier)
         if not rendition.wasSkipped then
             local success, pathOrMessage = rendition:waitForRender()
             if progressScope:isCanceled() then break end
             if success then
+                if publishService then
+                    local existingImageID = rendition.publishedPhotoId
+                    if existingImageID then
+                        -- replace
+                        logger:info("Need to replace image: " .. existingImageID)
+                    end
+                end
+
                 local imageID = ApplePhotosAPI.importPhoto(targetAlbumID, pathOrMessage)
                 logger:info("Import OK: " .. imageID)
+
                 if publishService then
                     logger:info("Setting remote photo ID")
                     rendition:recordPublishedPhotoId(imageID)
@@ -350,16 +359,13 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
             end
         end
     end
-    -- progressScope:done()
 end
 
 -- Publish service implementation
 
 function exportServiceProvider.deletePhotosFromPublishedCollection(publishSettings, arrayOfPhotoIds, deletedCallback)
-    for i, photoId in ipairs(arrayOfPhotoIds) do
-        -- FlickrAPI.deletePhoto( publishSettings, { photoId = photoId, suppressErrorCodes = { [ 1 ] = true } } )
-        -- 					-- If Flickr says photo not found, ignore that.
-
+    local deletedIDs = ApplePhotosAPI.deleteImages(arrayOfPhotoIds)
+    for _, photoId in ipairs(deletedIDs) do
         deletedCallback(photoId)
     end
 end
