@@ -262,3 +262,41 @@ function ApplePhotosAPI.deleteImages(imageIDs)
 
     return {}
 end
+
+------
+-- Renames a given album. Returns boolean success flag.
+function ApplePhotosAPI.renameAlbum(albumID, newName)
+    -- must be called from with a task
+    logger:info("renameAlbum | " .. albumID .. " | " .. newName)
+
+    local resultCode, result = invokeScript("RenameContainer", albumID, "album", newName)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return true
+    elseif result ~= nil then
+        logger:error("Error renaming album: " .. result.status)
+    else
+        logger:error("Unknown error")
+    end
+
+    return false
+end
+
+------
+-- Renames a given folder. Returns boolean success flag.
+function ApplePhotosAPI.renameFolder(folderID, newName)
+    -- must be called from with a task
+    logger:info("renameFolder | " .. folderID .. " | " .. newName)
+
+    local resultCode, result = invokeScript("RenameContainer", folderID, "folder", newName)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return true
+    elseif result ~= nil then
+        logger:error("Error renaming folder: " .. result.status)
+    else
+        logger:error("Unknown error")
+    end
+
+    return false
+end

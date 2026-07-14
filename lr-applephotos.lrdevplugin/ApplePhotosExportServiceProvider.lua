@@ -47,8 +47,19 @@ exportServiceProvider.titleForGoToPublishedCollection = "disable" -- TODO: imple
 exportServiceProvider.titleForGoToPublishedPhoto = "disable"      -- TODO: implement
 exportServiceProvider.supportsCustomSortOrder = false
 
-exportServiceProvider.disableRenamePublishedCollection = true    -- TODO: implement
-exportServiceProvider.disableRenamePublishedCollectionSet = true -- TODO: implement
+exportServiceProvider.disableRenamePublishedCollection = false
+exportServiceProvider.disableRenamePublishedCollectionSet = false
+
+function exportServiceProvider.metadataThatTriggersRepublish(publishSettings)
+    return {
+        default = false,
+        title = true,
+        caption = true,
+        keywords = true,
+        gps = true,
+        dateCreated = true,
+    }
+end
 
 -- Local helper functions
 
@@ -94,7 +105,7 @@ local function updateCantExportAndHelptext(propertyTable)
     propertyTable.LR_cantExportBecause = nil
 end
 
--- Export service implementation
+-- Export/Publish service implementation
 
 function exportServiceProvider.startDialog(propertyTable)
     logger:info("startDialog: " .. tostring(not not propertyTable.LR_isExportForPublish))
@@ -345,7 +356,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
                     local existingImageID = rendition.publishedPhotoId
                     if existingImageID then
                         -- replace
-                        logger:info("Need to replace image: " .. existingImageID)
+                        logger:info("Rendition has remote image ID: " .. existingImageID)
                     end
                 end
 
@@ -353,7 +364,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
                 logger:info("Import OK: " .. imageID)
 
                 if publishService then
-                    logger:info("Setting remote photo ID")
+                    logger:info("Setting remote photo ID: " .. imageID)
                     rendition:recordPublishedPhotoId(imageID)
                 end
             end
@@ -367,6 +378,24 @@ function exportServiceProvider.deletePhotosFromPublishedCollection(publishSettin
     local deletedIDs = ApplePhotosAPI.deleteImages(arrayOfPhotoIds)
     for _, photoId in ipairs(deletedIDs) do
         deletedCallback(photoId)
+    end
+end
+
+function exportServiceProvider.renamePublishedCollection(publishSettings, info)
+    if info.remoteId then
+        local success = ApplePhotosAPI.renameAlbum(info.remoteId, info.name)
+        if not success then
+            error("Unable to rename album")
+        end
+    end
+end
+
+function exportServiceProvider.renamePublishedCollectionSet(publishSettings, info)
+    if info.remoteId then
+        local success = ApplePhotosAPI.renameFolder(info.remoteId, info.name)
+        if not success then
+            error("Unable to rename folder")
+        end
     end
 end
 
