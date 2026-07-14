@@ -399,5 +399,18 @@ function exportServiceProvider.renamePublishedCollectionSet(publishSettings, inf
     end
 end
 
+function exportServiceProvider.updateCollectionSetSettings(publishSettings, info)
+    logger:info("UpdateCollectionSetSettings")
+    logger:info("name " .. info.name)
+    for key in pairs(info) do
+        logger:info("Key found: " .. tostring(key))
+    end
+
+    -- logger:info("id " .. info.publishedCollectionSet.getRemoteId())
+    -- logger:info("parent " .. info.publishedCollectionSet.getParent() == nil and "no parent" or
+    --     info.publishedCollectionSet.getParent().getName())
+    logger:info("done")
+end
+
 ---------------
 return exportServiceProvider
