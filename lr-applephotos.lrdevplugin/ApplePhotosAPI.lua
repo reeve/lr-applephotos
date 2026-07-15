@@ -212,13 +212,30 @@ function ApplePhotosAPI.createAlbum(albumName, folderId)
     -- must be called from with a task
     logger:info("createAlbum | " .. albumName .. " | " .. folderId)
 
-    local resultCode, result = invokeScript("CreateAlbum", albumName, folderId)
+    local resultCode, result = invokeScript("CreateContainer", albumName, "album", folderId)
 
     if resultCode == 0 and result ~= nil and next(result) ~= nil then
         local newAlbumID = result.i
         return newAlbumID
     else
         logger:error("Error creating new album: " .. resultCode)
+        return nil
+    end
+end
+
+------
+-- Creates a new Folder in the Photos hierachy. Name is (seemingly) any string, folderId should have previously been obtained via queryFolderStructure().
+function ApplePhotosAPI.createFolder(folderName, folderId)
+    -- must be called from with a task
+    logger:info("createFolder | " .. folderName .. " | " .. folderId)
+
+    local resultCode, result = invokeScript("CreateContainer", folderName, "folder", folderId)
+
+    if resultCode == 0 and result ~= nil and next(result) ~= nil then
+        local newFolderID = result.i
+        return newFolderID
+    else
+        logger:error("Error creating new folder: " .. resultCode)
         return nil
     end
 end
@@ -269,7 +286,7 @@ function ApplePhotosAPI.renameAlbum(albumID, newName)
     -- must be called from with a task
     logger:info("renameAlbum | " .. albumID .. " | " .. newName)
 
-    local resultCode, result = invokeScript("RenameContainer", albumID, "album", newName)
+    local resultCode, result = invokeScript("RenameAlbum", albumID, newName)
 
     if resultCode == 0 and result ~= nil and result.status == "ok" then
         return true
@@ -288,12 +305,33 @@ function ApplePhotosAPI.renameFolder(folderID, newName)
     -- must be called from with a task
     logger:info("renameFolder | " .. folderID .. " | " .. newName)
 
-    local resultCode, result = invokeScript("RenameContainer", folderID, "folder", newName)
+    local parentPath = ApplePhotosAPI.findFolder(folderID)
+    local resultCode, result = invokeScript("RenameFolder", folderID, parentPath, newName)
 
     if resultCode == 0 and result ~= nil and result.status == "ok" then
         return true
     elseif result ~= nil then
         logger:error("Error renaming folder: " .. result.status)
+    else
+        logger:error("Unknown error")
+    end
+
+    return false
+end
+
+------
+-- Finds the path to a given folder. Returns the path as a comma seperated list of ancestors (from furthest to nearest).
+-- Empty result indicates root level. Nil result indicates not found.
+function ApplePhotosAPI.findFolder(folderID)
+    -- must be called from with a task
+    logger:info("findFolder | " .. folderID)
+
+    local resultCode, result = invokeScript("FindFolder", folderID)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return result.parents
+    elseif result ~= nil then
+        logger:error("Error searching for folder: " .. result.status)
     else
         logger:error("Unknown error")
     end

@@ -2,6 +2,7 @@ require 'ApplePhotosAPI'
 
 local LrBinding = import 'LrBinding'
 local LrView = import 'LrView'
+local LrApplication = import "LrApplication"
 local logger = import 'LrLogger' ('ApplePhotosExportServiceProvider'):enable("logfile")
 
 local bind = LrView.bind
@@ -375,6 +376,8 @@ end
 -- Publish service implementation
 
 function exportServiceProvider.deletePhotosFromPublishedCollection(publishSettings, arrayOfPhotoIds, deletedCallback)
+    logger:info("deletePhotosFromPublishedCollection")
+
     local deletedIDs = ApplePhotosAPI.deleteImages(arrayOfPhotoIds)
     for _, photoId in ipairs(deletedIDs) do
         deletedCallback(photoId)
@@ -382,34 +385,58 @@ function exportServiceProvider.deletePhotosFromPublishedCollection(publishSettin
 end
 
 function exportServiceProvider.renamePublishedCollection(publishSettings, info)
+    logger:info("renamePublishedCollection")
+
+    local pc = info.publishedCollection
+
     if info.remoteId then
-        local success = ApplePhotosAPI.renameAlbum(info.remoteId, info.name)
-        if not success then
-            error("Unable to rename album")
+        if pc:type() == "LrPublishedCollection" then
+            local success = ApplePhotosAPI.renameAlbum(info.remoteId, info.name)
+            if not success then
+                error("Unable to rename album: " .. info.remoteId)
+            end
+        else
+            local success = ApplePhotosAPI.renameFolder(info.remoteId, info.name)
+            if not success then
+                error("Unable to rename folder: " .. info.remoteId)
+            end
         end
     end
 end
 
-function exportServiceProvider.renamePublishedCollectionSet(publishSettings, info)
-    if info.remoteId then
-        local success = ApplePhotosAPI.renameFolder(info.remoteId, info.name)
-        if not success then
-            error("Unable to rename folder")
-        end
-    end
-end
-
+-- This is invoked on creation or rename of a published collection set.
+-- Rename also invokes renamePublishedCollection, so we only handle creation here.
 function exportServiceProvider.updateCollectionSetSettings(publishSettings, info)
-    logger:info("UpdateCollectionSetSettings")
-    logger:info("name " .. info.name)
-    for key in pairs(info) do
-        logger:info("Key found: " .. tostring(key))
+    local pc = info.publishedCollection
+    local folderName = info.name
+    local baseFolderID = "root"
+
+    -- if there's no remote ID set, this is a collection set we don't know about, so create it
+    if not pc:getRemoteId() then
+        local directAncestor = info.parents and info.parents[#info.parents] or nil
+        if directAncestor and directAncestor.remoteCollectionId then
+            baseFolderID = directAncestor.remoteCollectionId
+        end
+
+        logger:info("baseFolderID: " .. baseFolderID)
+
+        local newFolderID = ApplePhotosAPI.createFolder(folderName, baseFolderID)
+
+        LrApplication.activeCatalog():withWriteAccessDo("RecordCollectionSetID", function(context)
+            pc:setRemoteId(newFolderID)
+            logger:info("newFolderID: " .. newFolderID)
+        end)
     end
 
-    -- logger:info("id " .. info.publishedCollectionSet.getRemoteId())
-    -- logger:info("parent " .. info.publishedCollectionSet.getParent() == nil and "no parent" or
-    --     info.publishedCollectionSet.getParent().getName())
     logger:info("done")
+end
+
+function exportServiceProvider.reparentPublishedCollection(publishSettings, info)
+    logger:info("reparentPublishedCollection")
+end
+
+function exportServiceProvider.deletePublishedCollection(publishSettings, info)
+    logger:info("deletePublishedCollection")
 end
 
 ---------------

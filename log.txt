@@ -1,0 +1,7 @@
+Plug-in error log for plug-in at: /Users/adamreeve/src/lr-applephotos/lr-applephotos.lrdevplugin
+
+**** Error 1
+
+An error occurred while attempting to update the settings for this collection.
+ApplePhotosExportServiceProvider.lua:427: attempt to concatenate upvalue 'newFolderID' (a nil value)
+
