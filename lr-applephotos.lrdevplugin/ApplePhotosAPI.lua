@@ -207,12 +207,22 @@ function ApplePhotosAPI.importPhoto(albumId, photoPath)
 end
 
 ------
--- Creates a new Album in the Photos hierachy. Name is (seemingly) any string, folderId should have previously been obtained via queryFolderStructure().
-function ApplePhotosAPI.createAlbum(albumName, folderId)
+-- Creates a new Album in the Photos hierachy. Name is (seemingly) any string, folderID should have previously been obtained via queryFolderStructure().
+function ApplePhotosAPI.createAlbum(albumName, folderID)
     -- must be called from with a task
-    logger:info("createAlbum | " .. albumName .. " | " .. folderId)
+    logger:info("createAlbum | " .. albumName .. " | " .. folderID)
 
-    local resultCode, result = invokeScript("CreateContainer", albumName, "album", folderId)
+    local parentPath = ""
+    if folderID ~= "root" then
+        local searchResult = ApplePhotosAPI.findFolder(folderID)
+        if searchResult == nil then
+            logger:error("Can't find base folder")
+            return nil
+        end
+        parentPath = searchResult
+    end
+
+    local resultCode, result = invokeScript("CreateContainer", albumName, "album", parentPath)
 
     if resultCode == 0 and result ~= nil and next(result) ~= nil then
         local newAlbumID = result.i
@@ -224,12 +234,21 @@ function ApplePhotosAPI.createAlbum(albumName, folderId)
 end
 
 ------
--- Creates a new Folder in the Photos hierachy. Name is (seemingly) any string, folderId should have previously been obtained via queryFolderStructure().
-function ApplePhotosAPI.createFolder(folderName, folderId)
+-- Creates a new Folder in the Photos hierachy. Name is (seemingly) any string, folderID should have previously been obtained via queryFolderStructure().
+function ApplePhotosAPI.createFolder(folderName, folderID)
     -- must be called from with a task
-    logger:info("createFolder | " .. folderName .. " | " .. folderId)
+    logger:info("createFolder | " .. folderName .. " | " .. folderID)
 
-    local resultCode, result = invokeScript("CreateContainer", folderName, "folder", folderId)
+    local parentPath = ""
+    if folderID ~= "root" then
+        local searchResult = ApplePhotosAPI.findFolder(folderID)
+        if searchResult == nil then
+            logger:error("Can't find base folder")
+            return nil
+        end
+        parentPath = searchResult
+    end
+    local resultCode, result = invokeScript("CreateContainer", folderName, "folder", parentPath)
 
     if resultCode == 0 and result ~= nil and next(result) ~= nil then
         local newFolderID = result.i
@@ -305,8 +324,16 @@ function ApplePhotosAPI.renameFolder(folderID, newName)
     -- must be called from with a task
     logger:info("renameFolder | " .. folderID .. " | " .. newName)
 
-    local parentPath = ApplePhotosAPI.findFolder(folderID)
-    local resultCode, result = invokeScript("RenameFolder", folderID, parentPath, newName)
+    local folderPath = ""
+    if folderID ~= "root" then
+        local searchResult = ApplePhotosAPI.findFolder(folderID)
+        if searchResult == nil then
+            logger:error("Can't find folder to rename")
+            return nil
+        end
+        folderPath = searchResult
+    end
+    local resultCode, result = invokeScript("RenameFolder", folderPath, newName)
 
     if resultCode == 0 and result ~= nil and result.status == "ok" then
         return true
@@ -320,8 +347,8 @@ function ApplePhotosAPI.renameFolder(folderID, newName)
 end
 
 ------
--- Finds the path to a given folder. Returns the path as a comma seperated list of ancestors (from furthest to nearest).
--- Empty result indicates root level. Nil result indicates not found.
+-- Finds the path to a given folder. Returns the path as a comma seperated list of ancestors (from furthest to nearest) including the target itself.
+-- Nil result indicates not found.
 function ApplePhotosAPI.findFolder(folderID)
     -- must be called from with a task
     logger:info("findFolder | " .. folderID)
@@ -329,12 +356,12 @@ function ApplePhotosAPI.findFolder(folderID)
     local resultCode, result = invokeScript("FindFolder", folderID)
 
     if resultCode == 0 and result ~= nil and result.status == "ok" then
-        return result.parents
+        return result.path
     elseif result ~= nil then
         logger:error("Error searching for folder: " .. result.status)
     else
         logger:error("Unknown error")
     end
 
-    return false
+    return nil
 end

@@ -2,6 +2,11 @@ Plug-in error log for plug-in at: /Users/adamreeve/src/lr-applephotos/lr-appleph
 
 **** Error 1
 
-An error occurred while attempting to update the settings for this collection.
-ApplePhotosExportServiceProvider.lua:427: attempt to concatenate upvalue 'newFolderID' (a nil value)
+An error occurred while attempting to run one of the plug-in’s scripts.
+ApplePhotosAPI.lua:222: unexpected symbol near '&')
+
+**** Error 2
+
+Could not load the post-processing filter from this plug-in.
+ApplePhotosAPI.lua:222: unexpected symbol near '&')
 

@@ -13,7 +13,7 @@ on run argv
         if searchResult is missing value then
             set response to {status: "not found", target: targetFolderID}
         else
-            set response to {status: "ok", target: targetFolderID, parents: searchResult}
+            set response to {status: "ok", target: targetFolderID, |path|: searchResult}
         end if
 
         tell jsonLib
@@ -27,19 +27,15 @@ on recurseFolders(currentContainer, pathSoFar, targetFolderID)
 	tell application "Photos"
 		set allSubfolders to folders of currentContainer
 		set pathElement to id of currentContainer
-		if pathElement is not "com.apple.photos" then
-			if pathSoFar is not "" then
-				set newPath to pathSoFar & "," & pathElement
-			else
-				set newPath to pathElement
-			end if
+		if pathElement is not "com.apple.photos" then            
+            set newPath to my append(pathSoFar, pathElement)
 		else
 			set newPath to pathSoFar
 		end if
 		repeat with subFolder in allSubfolders
 			set folderId to id of subFolder
 			if folderId is targetFolderID then
-				return newPath
+				return my append(newPath, targetFolderID)
 			end if
 			
 			set response to my recurseFolders(subFolder, newPath, targetFolderID)
@@ -50,3 +46,11 @@ on recurseFolders(currentContainer, pathSoFar, targetFolderID)
 		return missing value
 	end tell
 end recurseFolders
+
+on append(pathSoFar, newElem) 
+    if pathSoFar is not "" then
+		return pathSoFar & "," & newElem
+	else
+		return newElem
+	end if
+end

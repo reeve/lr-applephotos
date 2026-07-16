@@ -1,5 +1,5 @@
 -- renames a folder
--- parameters: <container id> <parentPath> <new name>
+-- parameters: <folderPath> <new name>
 on run argv
     tell application "Finder"
         -- Get the parent folder of the running script
@@ -7,18 +7,19 @@ on run argv
     end tell
     set jsonLibPath to currentDirectory & "JSONlib.scpt"
     set jsonLib to load script file jsonLibPath
+    set utilsLibPath to currentDirectory & "PhotosUtils.scpt"
+    set utilsLib to load script file utilsLibPath
 
-    if length of argv is not 3 then
+    if length of argv is not 2 then
         error "invalid arguments" number 1
     end if
 
-    set folderID to item 1 of argv
-    set parentPath to item 2 of argv
-    set newName to item 3 of argv
+    set folderPath to item 1 of argv
+    set newName to item 2 of argv
 
     tell application "Photos"
         try
-    	    set existingFolder to my findFolder(parentPath, folderID)
+    	    set existingFolder to utilsLib's locateFolderFromPath(folderPath)
 
             if existingFolder is not missing value then
                 set name of existingFolder to newName
@@ -40,24 +41,3 @@ on run argv
     end tell
 end run
 
-on findFolder(parentPath, folderID)
-	tell application "Photos"
-		if parentPath is "" then
-			set existingFolder to folder id folderID
-			return existingFolder
-		end if
-		
-		set AppleScript's text item delimiters to ","
-		set pathList to text items of parentPath
-		set AppleScript's text item delimiters to ""
-		
-		set currentContainer to application "Photos"
-		repeat with parentID in pathList
-			set parentFolder to folder id parentID of currentContainer
-			set currentContainer to parentFolder
-		end repeat
-		
-		set existingFolder to currentContainer's folder id folderID
-        return existingFolder
-	end tell
-end findFolder
