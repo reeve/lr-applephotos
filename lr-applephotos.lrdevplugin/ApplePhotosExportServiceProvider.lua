@@ -317,12 +317,17 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
         end
         if not targetAlbumID then
             logger:info("Creating target album")
-            ---@diagnostic disable-next-line: cast-local-type
-            targetAlbumID = ApplePhotosAPI.createAlbum(publishedCollectionInfo.name, exportSettings.selectedFolder)
-            if targetAlbumID == nil then
-                logger:error("Unable to create target album")
-                return
+
+            local lastParentID = "root"
+            local lastParent = publishedCollectionInfo.parents[#publishedCollectionInfo.parents]
+            if lastParent then
+                assert(lastParent.remoteCollectionId, "parent collection set has no remote ID")
+                lastParentID = lastParent.remoteCollectionId
             end
+            ---@diagnostic disable-next-line: cast-local-type
+            targetAlbumID = ApplePhotosAPI.createAlbum(publishedCollectionInfo.name, lastParentID)
+            assert(targetAlbumID, "Unable to create target album")
+
             exportSession:recordRemoteCollectionId(targetAlbumID)
         end
     else
@@ -331,10 +336,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
         if not exportSettings.exportToExistingAlbum then
             ---@diagnostic disable-next-line: cast-local-type
             targetAlbumID = ApplePhotosAPI.createAlbum(exportSettings.newAlbumName, exportSettings.selectedFolder)
-            if targetAlbumID == nil then
-                logger:error("Unable to create target album")
-                return
-            end
+            assert(targetAlbumID, "Unable to create target album")
         else
             logger:info("Using existing target album :" .. exportSettings.selectedAlbum)
             targetAlbumID = exportSettings.selectedAlbum
@@ -391,11 +393,13 @@ function exportServiceProvider.renamePublishedCollection(publishSettings, info)
 
     if info.remoteId then
         if pc:type() == "LrPublishedCollection" then
+            -- album/collection
             local success = ApplePhotosAPI.renameAlbum(info.remoteId, info.name)
             if not success then
                 error("Unable to rename album: " .. info.remoteId)
             end
         else
+            -- folder/collectionset
             local success = ApplePhotosAPI.renameFolder(info.remoteId, info.name)
             if not success then
                 error("Unable to rename folder: " .. info.remoteId)
@@ -437,6 +441,34 @@ end
 
 function exportServiceProvider.deletePublishedCollection(publishSettings, info)
     logger:info("deletePublishedCollection")
+
+    local pc = info.publishedCollection
+
+    -- for key, _ in pairs(info) do
+    --     logger:info(key)
+    -- end
+
+    -- local photos = info.photoIds
+    -- logger:info("photoids: " .. photos and #photos or "nil")
+
+    if info.remoteId then
+        if pc:type() == "LrPublishedCollection" then
+            logger:info("type is collection")
+            -- album/collection
+            -- local success = ApplePhotosAPI.deleteAlbum(info.remoteId)
+            -- if not success then
+            --     error("Unable to delete album: " .. info.remoteId)
+            -- end
+            error("foo")
+        else
+            logger:info("type is collectionset")
+            -- folder/collectionset
+            local success = ApplePhotosAPI.deleteFolder(info.remoteId)
+            if not success then
+                error("Unable to delete folder: " .. info.remoteId)
+            end
+        end
+    end
 end
 
 ---------------

@@ -365,3 +365,31 @@ function ApplePhotosAPI.findFolder(folderID)
 
     return nil
 end
+
+function ApplePhotosAPI.deleteFolder(folderID)
+    -- must be called from with a task
+    logger:info("deleteFolder | " .. folderID)
+
+    if folderID == "root" then
+        error("invalid folderID: " .. folderID)
+    end
+
+    local searchResult = ApplePhotosAPI.findFolder(folderID)
+    if searchResult == nil then
+        logger:error("Can't find folder to delete")
+        return nil
+    end
+    local folderPath = searchResult
+
+    local resultCode, result = invokeScript("DeleteFolder", folderPath)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return true
+    elseif result ~= nil then
+        logger:error("Error deleting folder: " .. result.status)
+    else
+        logger:error("Unknown error")
+    end
+
+    return false
+end
