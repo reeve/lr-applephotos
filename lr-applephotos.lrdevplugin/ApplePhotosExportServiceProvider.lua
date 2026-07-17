@@ -289,6 +289,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
     local exportSettings = assert(exportContext.propertyTable)
     local publishService = exportContext.publishService
     local nPhotos = exportSession:countRenditions()
+    local processedCount = 0
 
     -- Set progress title.
     local progressScope = exportContext:configureProgress {
@@ -299,6 +300,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
     }
 
     local targetAlbumID = nil
+    progressScope:setCaption("Setting up target album")
 
     if publishService then
         -- we're in a publish flow
@@ -347,32 +349,106 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
 
     logger:info("Ready to export to: " .. targetAlbumID)
 
-    local exportedPhotoIds = {}
+    local renditionsToUpdate = {}
+    local newRenditions = {}
 
-    for _, rendition in exportContext:renditions { stopIfCanceled = true } do
-        logger:info("Processing image: " .. rendition.photo.localIdentifier)
-        if not rendition.wasSkipped then
-            local success, pathOrMessage = rendition:waitForRender()
-            if progressScope:isCanceled() then break end
-            if success then
-                if publishService then
-                    local existingImageID = rendition.publishedPhotoId
-                    if existingImageID then
-                        -- replace
-                        logger:info("Rendition has remote image ID: " .. existingImageID)
-                    end
-                end
-
-                local imageID = ApplePhotosAPI.importPhoto(targetAlbumID, pathOrMessage)
-                logger:info("Import OK: " .. imageID)
-
-                if publishService then
-                    logger:info("Setting remote photo ID: " .. imageID)
-                    rendition:recordPublishedPhotoId(imageID)
-                end
+    for _, rendition in exportSession:renditions() do
+        logger:info("Analyzing image: " .. rendition.photo.localIdentifier)
+        if publishService then
+            local existingImageID = rendition.publishedPhotoId
+            if existingImageID then
+                -- replace
+                logger:info("Rendition has remote image ID: " .. existingImageID .. " - marking to update")
+                table.insert(renditionsToUpdate, rendition)
+            else
+                -- new publish
+                logger:info("Rendition is new published image")
+                table.insert(newRenditions, rendition)
             end
+        else
+            -- all exports
+            logger:info("Rendition is new exported image")
+            table.insert(newRenditions, rendition)
         end
     end
+
+    progressScope:setCaption("Adding new images")
+    logger:info("Starting new image additions")
+    for _, rendition in ipairs(newRenditions) do
+        if progressScope:isCanceled() then break end
+
+        local success, pathOrMessage = rendition:waitForRender()
+        if success then
+            local imageID = ApplePhotosAPI.importPhoto(targetAlbumID, pathOrMessage)
+            logger:info("Import OK: " .. imageID)
+
+            if publishService then
+                logger:info("Setting remote photo ID: " .. imageID)
+                rendition:recordPublishedPhotoId(imageID)
+            end
+        else
+            rendition:uploadFailed(pathOrMessage)
+        end
+
+        -- Manually advance the progress bar
+        processedCount = processedCount + 1
+        progressScope:setPortionComplete(processedCount, nPhotos)
+    end
+
+
+    if publishService then
+        progressScope:setCaption("Updating modified images")
+        logger:info("Starting modified image updates")
+        local replacementRecords = {}
+        for _, rendition in ipairs(renditionsToUpdate) do
+            if progressScope:isCanceled() then break end
+
+            local success, pathOrMessage = rendition:waitForRender()
+            if success then
+                replacementRecords[rendition.publishedPhotoId] = pathOrMessage
+            else
+                rendition:uploadFailed(pathOrMessage)
+            end
+
+            -- Manually advance the progress bar
+            processedCount = processedCount + 1
+            progressScope:setPortionComplete(processedCount, nPhotos)
+        end
+
+        ApplePhotosAPI.replacePhotos(replacementRecords)
+    end
+
+    progressScope:done()
+
+    -- for _, rendition in exportContext:renditions { stopIfCanceled = true } do
+    --     logger:info("Processing image: " .. rendition.photo.localIdentifier)
+    --     if not rendition.wasSkipped then
+    --         local success, pathOrMessage = rendition:waitForRender()
+    --         if progressScope:isCanceled() then break end
+    --         if success then
+    --             local shouldImport = true
+    --             if publishService then
+    --                 local existingImageID = rendition.publishedPhotoId
+    --                 if existingImageID then
+    --                     -- replace
+    --                     logger:info("Rendition has remote image ID: " .. existingImageID .. " marking to update")
+    --                     table.insert(renditionsToUpdate, rendition)
+    --                     shouldImport = false
+    --                 end
+    --             end
+
+    --             if shouldImport then
+    --                 local imageID = ApplePhotosAPI.importPhoto(targetAlbumID, pathOrMessage)
+    --                 logger:info("Import OK: " .. imageID)
+
+    --                 if publishService then
+    --                     logger:info("Setting remote photo ID: " .. imageID)
+    --                     rendition:recordPublishedPhotoId(imageID)
+    --                 end
+    --             end
+    --         end
+    --     end
+    -- end
 end
 
 -- Publish service implementation

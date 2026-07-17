@@ -6,25 +6,28 @@
 - [x] New album option
 - [x] Album picker
 - [x] Status updates/disablement etc
-- [ ] Support deep nested albums
+- [x] Support deep nested albums
+- [ ] Rescan button
 
 ### Export process
 - [x] Actual export mechanics
-- [ ] Create album on demand in correct folder
+- [x] Create album on demand in correct folder
 - [x] Reuse existing album
-- [ ] Edge case - album moved
+- [ ] Edge case - album moved during export process
 
 ## Publish 
 ### Dialog
 - [x] Base folder selection
 - [x] Status updates/disablement etc
+- [ ] Rescan button
 
 ## Publish Process
 - [x] Import new images
 - [x] Delete removed images
 - [ ] Update modified images
+    - [x] Implement replace in swift code
+    - [ ] Can't update metadata, so maybe should be delete & reimport? Need to decide
 - [x] Create new albums
-
 
 ## Maintenance/Adhoc Updates
 - [x] Create collection set

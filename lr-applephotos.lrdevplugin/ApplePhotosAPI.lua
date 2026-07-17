@@ -393,3 +393,7 @@ function ApplePhotosAPI.deleteFolder(folderID)
 
     return false
 end
+
+function ApplePhotosAPI.replaceImages(replacementRecords)
+    logger:info("replaceImages")
+end
