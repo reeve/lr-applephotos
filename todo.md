@@ -49,3 +49,6 @@
 ## Other
 - [ ] Performance - optimize out multiple calls
 - [ ] Should everything be swift?
+
+## Notes
+ - Current version of photos proxy needs explict access to directory where replacement files are located due to sandboxing. This is currently downloads for testing, need to see what happens when it's the LR output tmp folder. 
