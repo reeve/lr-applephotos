@@ -31,9 +31,10 @@
 - [x] Rename collection set
 - [x] Delete collection set
 - [x] Rename album
-- [ ] Delete album
-- [ ] Album reparent
-- [ ] Folder reparent
+- [x] Delete empty album
+- [x] Delete album + images
+- [x] Album reparent
+- [x] Folder reparent
 
 ## Edge cases
 - [ ] Ensure new albums & folders are in base folder
@@ -41,8 +42,9 @@
 - [ ] Manual rename (maybe check on publish and update name?)
 - [ ] Image manually deleted (recreate on next publish)
 - [ ] Folder/album manually deleted (recreate?)
-- [ ] Recursively delete images in collection set tree
+- [x] Recursively delete images in collection set tree
 
 ## Other
 - [ ] Performance - optimize out multiple calls
 - [ ] Should everything be swift?
+- [ ] Borrow some utils/setup stuff from piwigo

@@ -393,3 +393,39 @@ function ApplePhotosAPI.deleteFolder(folderID)
 
     return false
 end
+
+function ApplePhotosAPI.deleteAlbum(albumID)
+    -- must be called from with a task
+    logger:info("deleteAlbum | " .. albumID)
+
+    local resultCode, result = invokeScript("DeleteAlbum", albumID)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return true
+    elseif result ~= nil then
+        logger:error("Error deleting album: " .. result.status)
+    else
+        logger:error("Unknown error")
+    end
+
+    return false
+end
+
+function ApplePhotosAPI.replaceImages(replacementRecords)
+    logger:info("replaceImages")
+end
+
+function ApplePhotosAPI.moveCollection(collectionID, parentID)
+    -- must be called from within a task
+    logger:info("moveCollection | " .. collectionID .. " | " .. parentID)
+
+    local resultCode, result = invokeSwift("move", collectionID, parentID)
+
+    if resultCode == 0 and result ~= nil and result.success then
+        return true
+    elseif result ~= nil and result.error ~= nil then
+        logger:error("Error moving item: " .. result.error)
+    else
+        logger:error("Unknown error")
+    end
+end

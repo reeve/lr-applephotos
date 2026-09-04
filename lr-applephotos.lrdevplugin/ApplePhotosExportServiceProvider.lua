@@ -8,6 +8,8 @@ local logger = import 'LrLogger' ('ApplePhotosExportServiceProvider'):enable("lo
 local bind = LrView.bind
 local share = LrView.share
 
+local utils = require "utils"
+
 local MSG_SCANNING = "Retrieving folder structure from Apple Photos..."
 local MSG_NOT_SELECTED = "You haven't specified a destination album"
 local MSG_ROOT_EXPLANATION = "Don't put album inside any folder"
@@ -104,6 +106,28 @@ local function updateCantExportAndHelptext(propertyTable)
     end
 
     propertyTable.LR_cantExportBecause = nil
+end
+
+local function findAllImagesInHierarchy(root, photoIds)
+    logger:info("findAllImagesInHierarchy")
+
+    if root:type() == "LrPublishedCollection" then
+        logger:info(root:getName() .. " - type is collection")
+
+        local photos = root:getPublishedPhotos()
+        logger:info("photo count: " .. #photos)
+
+        for _, photo in ipairs(photos) do
+            table.insert(photoIds, photo:getRemoteId())
+        end
+    elseif root:type() == "LrPublishedCollectionSet" then
+        logger:info(root:getName() .. " - type is collectionset")
+
+        local children = root:getChildren()
+        for _, child in ipairs(children) do
+            findAllImagesInHierarchy(child, photoIds)
+        end
+    end
 end
 
 -- Export/Publish service implementation
@@ -437,32 +461,48 @@ end
 
 function exportServiceProvider.reparentPublishedCollection(publishSettings, info)
     logger:info("reparentPublishedCollection")
+
+    local pc = info.publishedCollection
+    if info.remoteId then
+        local target = info.remoteId
+        local allParents = info.parents
+        local destination
+        if utils.nilOrEmpty(allParents) then
+            destination = "ROOT" -- move to root
+        else
+            destination = allParents[#allParents].remoteCollectionId
+        end
+
+        ApplePhotosAPI.moveCollection(target, destination)
+    end
 end
 
 function exportServiceProvider.deletePublishedCollection(publishSettings, info)
     logger:info("deletePublishedCollection")
 
+    -- this is called for deletion of collections and collection sets, so need to handle
+    -- the general case of deleting a tree of collections and images
+
     local pc = info.publishedCollection
 
-    -- for key, _ in pairs(info) do
-    --     logger:info(key)
-    -- end
-
-    -- local photos = info.photoIds
-    -- logger:info("photoids: " .. photos and #photos or "nil")
-
     if info.remoteId then
+        -- first find and delete all the photos in the entire hierarchy
+        local photosToDelete = {}
+        findAllImagesInHierarchy(pc, photosToDelete)
+        logger:info("deleting " .. #photosToDelete .. " images")
+        ApplePhotosAPI.deleteImages(photosToDelete)
+
+        -- now delete the root thing, whether it's a collection or collection set
         if pc:type() == "LrPublishedCollection" then
             logger:info("type is collection")
-            -- album/collection
-            -- local success = ApplePhotosAPI.deleteAlbum(info.remoteId)
-            -- if not success then
-            --     error("Unable to delete album: " .. info.remoteId)
-            -- end
-            error("foo")
+
+            local success = ApplePhotosAPI.deleteAlbum(info.remoteId)
+            if not success then
+                error("Unable to delete album: " .. info.remoteId)
+            end
         else
             logger:info("type is collectionset")
-            -- folder/collectionset
+
             local success = ApplePhotosAPI.deleteFolder(info.remoteId)
             if not success then
                 error("Unable to delete folder: " .. info.remoteId)
