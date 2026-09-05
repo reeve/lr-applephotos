@@ -9,17 +9,36 @@ on run argv
     set jsonLibPath to currentDirectory & "JSONlib.scpt"
     set jsonLib to load script file jsonLibPath
 
-    if length of argv is not 1 then
+    if length of argv is less than 1 or length of argv is greater than 2 then
         error "invalid arguments" number 1
     end if
 
     set albumId to item 1 of argv
+    if length of argv is 2 then 
+        set rootFolderId to item 2 of argv
+    end if
+
 
     tell application "Photos"
         try
             set existingAlbum to album id albumId
             if existingAlbum is not missing value then
                 set response to {n: name of existingAlbum, i: id of existingAlbum}
+                if rootFolderId is not missing value then
+                    set found to false
+                    set p to a reference to (parent of existingAlbum)
+                    repeat until p is missing value
+                        if id of p is rootFolderId then
+                            set found to true
+                            exit
+                        end if
+                        set p to a reference to (parent of p)
+                    end repeat
+                    if not found
+                        -- specified root not found in parent hierarchy, treat as not found
+                        set response to {}
+                    end if
+                end if
             else 
                 set response to {}
             end if

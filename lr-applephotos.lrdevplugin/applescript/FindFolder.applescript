@@ -9,7 +9,7 @@ on run argv
     tell application "Photos"
         set targetFolderID to item 1 of argv
 
-        set searchResult to my recurseFolders(application "Photos", "", targetFolderID)
+        set searchResult to my recurseFolders(application "Photos", {}, targetFolderID)
         if searchResult is missing value then
             set response to {status: "not found", target: targetFolderID}
         else
@@ -47,10 +47,8 @@ on recurseFolders(currentContainer, pathSoFar, targetFolderID)
 	end tell
 end recurseFolders
 
-on append(pathSoFar, newElem) 
-    if pathSoFar is not "" then
-		return pathSoFar & "," & newElem
-	else
-		return newElem
-	end if
+on append(oldList, newElem) 
+	copy oldList to newList
+	copy newElem to the end of newList
+	return newList
 end

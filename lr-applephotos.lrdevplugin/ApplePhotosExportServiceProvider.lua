@@ -35,10 +35,10 @@ exportServiceProvider.hidePrintResolution = true
 exportServiceProvider.canExportVideo = false
 
 exportServiceProvider.exportPresetFields = {
-    { key = 'selectedFolder',        default = nil },
-    { key = 'selectedAlbum',         default = nil },
-    { key = 'exportToExistingAlbum', default = false },
-    { key = 'newAlbumName',          default = '' },
+    { key = 'selectedFolder',        default = nil },   -- base folder for publish/export
+    { key = 'selectedAlbum',         default = nil },   -- existing folder for export
+    { key = 'exportToExistingAlbum', default = false }, -- if true, use selectedAlbum for export, else use new album name
+    { key = 'newAlbumName',          default = '' },    -- new album name for export
 }
 
 -- Publish service specific properties
@@ -46,10 +46,9 @@ exportServiceProvider.small_icon = 'resources/photos-small.png'
 exportServiceProvider.titleForPublishedCollection = "Album"
 exportServiceProvider.titleForPublishedCollectionSet = "Folder"
 exportServiceProvider.titleForPublishedSmartCollection = "Smart Album"
-exportServiceProvider.titleForGoToPublishedCollection = "disable" -- TODO: implement
-exportServiceProvider.titleForGoToPublishedPhoto = "disable"      -- TODO: implement
+exportServiceProvider.titleForGoToPublishedCollection = "disable"
+exportServiceProvider.titleForGoToPublishedPhoto = "disable"
 exportServiceProvider.supportsCustomSortOrder = false
-
 exportServiceProvider.disableRenamePublishedCollection = false
 exportServiceProvider.disableRenamePublishedCollectionSet = false
 
@@ -314,6 +313,9 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
     local publishService = exportContext.publishService
     local nPhotos = exportSession:countRenditions()
 
+    -- logger:info("context:")
+    -- logger:info(utils.serialiseVar(exportContext))
+
     -- Set progress title.
     local progressScope = exportContext:configureProgress {
         title = nPhotos > 1
@@ -327,29 +329,41 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
     if publishService then
         -- we're in a publish flow
         logger:info("Setting up album for Publish")
+        local rootFolderID = exportSettings.selectedFolder
+        assert(rootFolderID, "Must set publish root folder before publishing.")
+
         local publishedCollectionInfo = exportContext.publishedCollectionInfo
         local remoteAlbumID = publishedCollectionInfo.remoteId
         if remoteAlbumID then
             logger:info("Checking existing target album :" .. remoteAlbumID)
-            local foundName = ApplePhotosAPI.checkAlbumExists(remoteAlbumID)
+
+            -- this call will return the name if the album exists and is still a child of the publish root
+            local foundName = ApplePhotosAPI.checkAlbumExists(remoteAlbumID, rootFolderID)
             if foundName then
                 logger:info("Found existing target album, will reuse")
                 targetAlbumID = remoteAlbumID
             else
-                logger:info("Target album is missing, will recreate")
+                logger:info("Target album is missing or moved, will recreate")
             end
         end
         if not targetAlbumID then
             logger:info("Creating target album")
+            -- we need to figure out where to create the new album, default to the publish root
+            local albumParentID = rootFolderID
 
-            local lastParentID = "root"
+            -- look for the folder representing the parent collection set
             local lastParent = publishedCollectionInfo.parents[#publishedCollectionInfo.parents]
             if lastParent then
                 assert(lastParent.remoteCollectionId, "parent collection set has no remote ID")
-                lastParentID = lastParent.remoteCollectionId
+                local lastParentID = lastParent.remoteCollectionId
+                local pathToParent = ApplePhotosAPI.findFolder(lastParentID)
+                if utils.array_contains(pathToParent, rootFolderID) then
+                    -- we found the requested parent folder, and it's a child of the root, so safe to use
+                    albumParentID = lastParentID
+                end
             end
             ---@diagnostic disable-next-line: cast-local-type
-            targetAlbumID = ApplePhotosAPI.createAlbum(publishedCollectionInfo.name, lastParentID)
+            targetAlbumID = ApplePhotosAPI.createAlbum(publishedCollectionInfo.name, albumParentID)
             assert(targetAlbumID, "Unable to create target album")
 
             exportSession:recordRemoteCollectionId(targetAlbumID)
@@ -435,9 +449,11 @@ end
 -- This is invoked on creation or rename of a published collection set.
 -- Rename also invokes renamePublishedCollection, so we only handle creation here.
 function exportServiceProvider.updateCollectionSetSettings(publishSettings, info)
+    logger:info("updateCollectionSetSettings")
+
     local pc = info.publishedCollection
     local folderName = info.name
-    local baseFolderID = "root"
+    local baseFolderID = publishSettings.selectedFolder -- publish root
 
     -- if there's no remote ID set, this is a collection set we don't know about, so create it
     if not pc:getRemoteId() then
@@ -448,31 +464,30 @@ function exportServiceProvider.updateCollectionSetSettings(publishSettings, info
 
         logger:info("baseFolderID: " .. baseFolderID)
 
+        assert(baseFolderID, "baseFolderID is nil")
         local newFolderID = ApplePhotosAPI.createFolder(folderName, baseFolderID)
 
         LrApplication.activeCatalog():withWriteAccessDo("RecordCollectionSetID", function(context)
             pc:setRemoteId(newFolderID)
-            logger:info("newFolderID: " .. newFolderID)
+            logger:info("created new folder: " .. folderName .. " at " .. newFolderID)
         end)
     end
-
-    logger:info("done")
 end
 
 function exportServiceProvider.reparentPublishedCollection(publishSettings, info)
     logger:info("reparentPublishedCollection")
 
-    local pc = info.publishedCollection
     if info.remoteId then
         local target = info.remoteId
         local allParents = info.parents
         local destination
         if utils.nilOrEmpty(allParents) then
-            destination = "ROOT" -- move to root
+            destination = publishSettings.selectedFolder -- publish root
         else
             destination = allParents[#allParents].remoteCollectionId
         end
 
+        assert(destination, "destination folder ID is nil")
         ApplePhotosAPI.moveCollection(target, destination)
     end
 end
@@ -484,8 +499,21 @@ function exportServiceProvider.deletePublishedCollection(publishSettings, info)
     -- the general case of deleting a tree of collections and images
 
     local pc = info.publishedCollection
+    local publishRootId = publishSettings.selectedFolder
 
     if info.remoteId then
+        -- safety check - make sure we're inside the publish root before doing anything
+        if pc:type() == "LrPublishedCollection" then
+            if not ApplePhotosAPI.checkAlbumExists(info.remoteId, publishRootId) then
+                error("Specified album is not within publish root - aborting")
+            end
+        else
+            local pathToTarget = ApplePhotosAPI.findFolder(info.remoteId)
+            if not utils.array_contains(pathToTarget, publishRootId) then
+                error("Specified folder is not within publish root - aborting")
+            end
+        end
+
         -- first find and delete all the photos in the entire hierarchy
         local photosToDelete = {}
         findAllImagesInHierarchy(pc, photosToDelete)

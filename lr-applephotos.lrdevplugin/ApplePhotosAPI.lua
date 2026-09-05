@@ -219,7 +219,7 @@ function ApplePhotosAPI.createAlbum(albumName, folderID)
             logger:error("Can't find base folder")
             return nil
         end
-        parentPath = searchResult
+        parentPath = table.concat(searchResult, ',')
     end
 
     local resultCode, result = invokeScript("CreateContainer", albumName, "album", parentPath)
@@ -246,7 +246,7 @@ function ApplePhotosAPI.createFolder(folderName, folderID)
             logger:error("Can't find base folder")
             return nil
         end
-        parentPath = searchResult
+        parentPath = table.concat(searchResult, ',')
     end
     local resultCode, result = invokeScript("CreateContainer", folderName, "folder", parentPath)
 
@@ -260,12 +260,13 @@ function ApplePhotosAPI.createFolder(folderName, folderID)
 end
 
 ------
--- Checks for existance of an album by it's ID. If existant, returns the current name. If not, returns false.
-function ApplePhotosAPI.checkAlbumExists(albumID)
+-- Checks for existance of an album by it's ID. Optionally filters to the tree branch rooted in rootFolderID.
+-- If found, returns the current name. If not, returns false.
+function ApplePhotosAPI.checkAlbumExists(albumID, rootFolderID)
     -- must be called from with a task
-    logger:info("checkAlbumExists | " .. albumID)
+    logger:info("checkAlbumExists | " .. albumID .. " | " .. (rootFolderID or "nil"))
 
-    local resultCode, result = invokeScript("CheckAlbumExists", albumID)
+    local resultCode, result = invokeScript("CheckAlbumExists", albumID, rootFolderID)
 
     if resultCode == 0 and result ~= nil and next(result) ~= nil then
         local currentAlbumName = result.n
@@ -331,7 +332,7 @@ function ApplePhotosAPI.renameFolder(folderID, newName)
             logger:error("Can't find folder to rename")
             return nil
         end
-        folderPath = searchResult
+        folderPath = table.concat(searchResult, ',')
     end
     local resultCode, result = invokeScript("RenameFolder", folderPath, newName)
 
@@ -347,7 +348,7 @@ function ApplePhotosAPI.renameFolder(folderID, newName)
 end
 
 ------
--- Finds the path to a given folder. Returns the path as a comma seperated list of ancestors (from furthest to nearest) including the target itself.
+-- Finds the path to a given folder. Returns the path as an array of ancestors (from furthest to nearest) including the target itself.
 -- Nil result indicates not found.
 function ApplePhotosAPI.findFolder(folderID)
     -- must be called from with a task
@@ -379,7 +380,7 @@ function ApplePhotosAPI.deleteFolder(folderID)
         logger:error("Can't find folder to delete")
         return nil
     end
-    local folderPath = searchResult
+    local folderPath = table.concat(searchResult, ',')
 
     local resultCode, result = invokeScript("DeleteFolder", folderPath)
 
