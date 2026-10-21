@@ -22,8 +22,8 @@
 ## Publish Process
 - [x] Import new images
 - [x] Delete removed images
-- [ ] Update modified image data
-- [ ] Update modified image metadata
+- [x] Update modified image data (delete and reimport)
+- [x] Update modified image metadata (delete and reimport)
 - [x] Create new albums
 
 
@@ -48,7 +48,8 @@
 - [ ] Delete images from album which has been moved out of publish root should fail
 - [x] Delete album which has been moved out of publish root should fail
 - [x] Delete folder which has been moved out of publish root should fail
-- [ ] Album reparent is relative to root not publish root
+- [ ] Album reparent is relative to root not publish root (???)
+- [ ] Need to confirm it's impossible to setup plugin without setting publish root to something
 
 ## Other
 - [ ] Performance - optimize out multiple calls
@@ -58,3 +59,4 @@
 - [ ] Borrow some utils/setup stuff from piwigo
 - [ ] Is it possible to implement "go to" in the photos UI?
 - [ ] Review error handling, logging, etc
+- [ ] Idea - put a standard check in both applescript and swift libs to check mutations are within publishroot

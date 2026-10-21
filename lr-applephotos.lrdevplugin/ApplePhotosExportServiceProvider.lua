@@ -59,6 +59,7 @@ function exportServiceProvider.metadataThatTriggersRepublish(publishSettings)
         caption = true,
         keywords = true,
         gps = true,
+        location = true,
         dateCreated = true,
     }
 end
@@ -385,7 +386,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
 
     logger:info("Ready to export to: " .. targetAlbumID)
 
-    local exportedPhotoIds = {}
+    local idsToDelete = {}
 
     for _, rendition in exportContext:renditions { stopIfCanceled = true } do
         logger:info("Processing image: " .. rendition.photo.localIdentifier)
@@ -397,7 +398,11 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
                     local existingImageID = rendition.publishedPhotoId
                     if existingImageID then
                         -- replace
+                        -- we add the remote ID to a list to be deleted, the new version of the image will be
+                        -- imported below prior to the deletion, but the remote ID will be updated there so order
+                        -- doesn't matter in this case
                         logger:info("Rendition has remote image ID: " .. existingImageID)
+                        idsToDelete[#idsToDelete + 1] = existingImageID
                     end
                 end
 
@@ -410,6 +415,10 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
                 end
             end
         end
+    end
+
+    if not utils.nilOrEmpty(idsToDelete) then
+        ApplePhotosAPI.deleteImages(idsToDelete)
     end
 end
 
