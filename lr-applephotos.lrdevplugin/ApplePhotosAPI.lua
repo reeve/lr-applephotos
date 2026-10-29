@@ -424,3 +424,33 @@ function ApplePhotosAPI.moveCollection(collectionID, parentID)
         logger:error("Unknown error")
     end
 end
+
+function ApplePhotosAPI.displayPhoto(photoID)
+    -- must be called from within a task
+    logger:info("displayPhoto | " .. photoID)
+
+    local resultCode, result = invokeScript("GotoPhoto", photoID)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return true
+    elseif result ~= nil then
+        logger:error("Error displaying photo: " .. result.error)
+    else
+        logger:error("Unknown error")
+    end
+end
+
+function ApplePhotosAPI.displayAlbum(albumID)
+    -- must be called from within a task
+    logger:info("displayAlbum | " .. albumID)
+
+    local resultCode, result = invokeScript("GotoAlbum", albumID)
+
+    if resultCode == 0 and result ~= nil and result.status == "ok" then
+        return true
+    elseif result ~= nil then
+        logger:error("Error displaying album: " .. result.error)
+    else
+        logger:error("Unknown error")
+    end
+end

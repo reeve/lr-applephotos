@@ -46,8 +46,6 @@ exportServiceProvider.small_icon = 'resources/photos-small.png'
 exportServiceProvider.titleForPublishedCollection = "Album"
 exportServiceProvider.titleForPublishedCollectionSet = "Folder"
 exportServiceProvider.titleForPublishedSmartCollection = "Smart Album"
-exportServiceProvider.titleForGoToPublishedCollection = "disable"
-exportServiceProvider.titleForGoToPublishedPhoto = "disable"
 exportServiceProvider.supportsCustomSortOrder = false
 exportServiceProvider.disableRenamePublishedCollection = false
 exportServiceProvider.disableRenamePublishedCollectionSet = false
@@ -549,6 +547,24 @@ function exportServiceProvider.deletePublishedCollection(publishSettings, info)
                 error("Unable to delete folder: " .. info.remoteId)
             end
         end
+    end
+end
+
+function exportServiceProvider.goToPublishedPhoto(publishSettings, info)
+    logger:info("goToPublishedPhoto")
+
+    local photoID = info.remoteId
+    if not utils.nilOrEmpty(photoID) then
+        ApplePhotosAPI.displayPhoto(photoID)
+    end
+end
+
+function exportServiceProvider.goToPublishedCollection(publishSettings, info)
+    logger:info("goToPublishedCollection")
+
+    local albumID = info.remoteId
+    if not utils.nilOrEmpty(albumID) then
+        ApplePhotosAPI.displayAlbum(albumID)
     end
 end
 

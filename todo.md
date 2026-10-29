@@ -51,13 +51,14 @@
 - [ ] Album reparent is relative to root not publish root (???)
 - [ ] Need to confirm it's impossible to setup plugin without setting publish root to something
 - [x] Edit publish settings - folder name popup doesn't select previously configured value (because it's trying to match string to tuple)
+- [ ] if publish root is changed, probably should move folders? 
 
 ## Other
 - [ ] Performance - optimize out multiple calls
 - [ ] Performance - findFolder could start at publish root vs full search and post-filter, when in a publish context
 - [ ] Performance - put some timing on stuff, some things seem very slow
 - [ ] Should everything be swift?
-- [ ] Borrow some utils/setup stuff from piwigo
-- [ ] Is it possible to implement "go to" in the photos UI?
+- [x] Borrow some utils/setup stuff from piwigo
+- [x] Is it possible to implement "go to" in the photos UI?
 - [ ] Review error handling, logging, etc
 - [ ] Idea - put a standard check in both applescript and swift libs to check mutations are within publishroot
