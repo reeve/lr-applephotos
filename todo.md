@@ -50,6 +50,7 @@
 - [x] Delete folder which has been moved out of publish root should fail
 - [ ] Album reparent is relative to root not publish root (???)
 - [ ] Need to confirm it's impossible to setup plugin without setting publish root to something
+- [x] Edit publish settings - folder name popup doesn't select previously configured value (because it's trying to match string to tuple)
 
 ## Other
 - [ ] Performance - optimize out multiple calls

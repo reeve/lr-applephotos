@@ -7,6 +7,7 @@ local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local logger = import 'LrLogger' ('ApplePhotosAPI'):enable("logfile")
 local json = require "json"
+local utils = require "utils"
 
 local PLUGIN_PATH = _PLUGIN.path
 
@@ -175,7 +176,7 @@ function ApplePhotosAPI.queryFolderStructure(propertyTable)
             propertyTable.albumMap = albumMap
 
             -- set defaults
-            if propertyTable.selectedFolder == nil then
+            if propertyTable.selectedFolder == nil or not utils.array_contains_property(flattenedList, "value", propertyTable.selectedFolder) then
                 propertyTable.selectedFolder = flattenedList[1].value
             end
         else

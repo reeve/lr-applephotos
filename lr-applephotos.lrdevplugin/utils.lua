@@ -51,6 +51,15 @@ function utils.array_contains(arr, target)
     return false
 end
 
+function utils.array_contains_property(arr, property, target)
+    for _, value in ipairs(arr) do
+        if value[property] == target then
+            return true
+        end
+    end
+    return false
+end
+
 function utils.serialiseVar(value, indent)
     -- serialises an unknown variable
     indent = indent or ""
