@@ -526,8 +526,12 @@ function exportServiceProvider.deletePublishedCollection(publishSettings, info)
         -- first find and delete all the photos in the entire hierarchy
         local photosToDelete = {}
         findAllImagesInHierarchy(pc, photosToDelete)
-        logger:info("deleting " .. #photosToDelete .. " images")
-        ApplePhotosAPI.deleteImages(photosToDelete)
+        if utils.nilOrEmpty(photosToDelete) then
+            logger:info("no images found in hierarchy")
+        else
+            logger:info("deleting " .. #photosToDelete .. " images")
+            ApplePhotosAPI.deleteImages(photosToDelete)
+        end
 
         -- now delete the root thing, whether it's a collection or collection set
         if pc:type() == "LrPublishedCollection" then

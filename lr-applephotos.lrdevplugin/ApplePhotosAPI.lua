@@ -71,7 +71,6 @@ local function genericInvoke(name, commandFormatter)
     logger:info("Invoking command: " .. command)
     local resultCode = LrTasks.execute(command)
     local result = nil
-
     if resultCode == 0 then
         if LrFileUtils.exists(tempOutputFile) then
             local capturedOutput = LrFileUtils.readFile(tempOutputFile)
@@ -279,12 +278,12 @@ end
 ------
 -- Deletes images, referenced by their ID. The image will be deleted from the library entirely, regardless of which albums it is in.
 -- Returns a list of the IDs successfully deleted.
--- NOTE: Photos will prompt the user for confirmation on each execution, this is unavoidable.
+-- NOTE: Photos will prompt the user for confirmation once per execution, this is unavoidable.
 function ApplePhotosAPI.deleteImages(imageIDs)
     -- must be called from with a task
     logger:info("deleteImages | " .. table.concat(imageIDs, " "))
 
-    local resultCode, result = invokeSwift("delete", unpack(imageIDs))
+    local resultCode, result = invokeSwift("delete-images", unpack(imageIDs))
 
     if resultCode == 0 and result ~= nil and result.success then
         -- all good, just figure out missing files
@@ -375,19 +374,12 @@ function ApplePhotosAPI.deleteFolder(folderID)
         error("invalid folderID: " .. folderID)
     end
 
-    local searchResult = ApplePhotosAPI.findFolder(folderID)
-    if searchResult == nil then
-        logger:error("Can't find folder to delete")
-        return nil
-    end
-    local folderPath = table.concat(searchResult, ',')
+    local resultCode, result = invokeSwift("delete-folder", folderID)
 
-    local resultCode, result = invokeScript("DeleteFolder", folderPath)
-
-    if resultCode == 0 and result ~= nil and result.status == "ok" then
+    if resultCode == 0 and result ~= nil and result.success then
         return true
-    elseif result ~= nil then
-        logger:error("Error deleting folder: " .. result.status)
+    elseif result ~= nil and result.error ~= nil then
+        logger:error("Error deleting folder: " .. result.error)
     else
         logger:error("Unknown error")
     end
@@ -402,6 +394,7 @@ function ApplePhotosAPI.deleteAlbum(albumID)
     local resultCode, result = invokeScript("DeleteAlbum", albumID)
 
     if resultCode == 0 and result ~= nil and result.status == "ok" then
+        logger:info("deleted album successfully")
         return true
     elseif result ~= nil then
         logger:error("Error deleting album: " .. result.status)
