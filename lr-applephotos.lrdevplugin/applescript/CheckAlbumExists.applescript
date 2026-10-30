@@ -36,15 +36,15 @@ on run argv
                     end repeat
                     if not found
                         -- specified root not found in parent hierarchy, treat as not found
-                        set response to {success: false, error: "found, but not a child of specified root folder"}
+                        set response to {success: false, |error|: "found, but not a child of specified root folder"}
                     end if
                 end if
             else 
-                set response to {success: false, error: "not found"}
+                set response to {success: false, |error|: "not found"}
             end if
         on error
             -- Likely doesn't exist
-                set response to {success: false, error: "unknown"}
+                set response to {success: false, |error|: "unknown"}
         end try
 
         tell jsonLib

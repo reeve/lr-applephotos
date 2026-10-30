@@ -29,10 +29,10 @@ on run argv
                 set imagerecord to item 1 of imagerecords 
                 set response to {success: true, fn: filename of imagerecord, i: id of imagerecord}
             on error
-                set response to {success: false, error: "error during import"}
+                set response to {success: false, |error|: "error during import"}
             end try
         else 
-            set response to {success: false, error: "targetAlbum not found"}
+            set response to {success: false, |error|: "targetAlbum not found"}
         end
 
         tell jsonLib

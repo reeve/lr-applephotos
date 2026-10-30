@@ -23,10 +23,10 @@ on run argv
             	spotlight targetAlbum
                 set response to {success: true}
             else 
-                set response to {success: false, error: "not found"}
+                set response to {success: false, |error|: "not found"}
             end if
         on error
-            set response to {success: false, error: "error thrown trying to spotlight"}
+            set response to {success: false, |error|: "error thrown trying to spotlight"}
         end try
 
         tell jsonLib

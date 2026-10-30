@@ -7,7 +7,8 @@ set jsonLib to load script file jsonLibPath
 
 tell application "Photos"
     set children to my recurseFolders(application "Photos")
-    set response to {success: true, {n: "Root", i: "root", c: children, t: "f"}}
+    set structure to {{n: "Root", i: "root", c: children, t: "f"}} -- double array here is important for parsing back in lua
+    set response to {success: true, structure: structure}
     tell jsonLib
         set jsonResponse to jsonLib's convertASToJSON:response saveTo:missing value
     end tell

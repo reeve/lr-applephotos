@@ -15,7 +15,7 @@ on run argv
 
         set searchResult to my recurseFolders(application "Photos", {}, targetFolderID)
         if searchResult is missing value then
-            set response to {success: false, error: "not found", target: targetFolderID}
+            set response to {success: false, |error|: "not found", target: targetFolderID}
         else
             set response to {success: true, target: targetFolderID, |path|: searchResult}
         end if

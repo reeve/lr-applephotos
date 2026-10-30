@@ -24,11 +24,11 @@ on run argv
                 delete existingAlbum
                 set response to {success: true}
             else 
-                set response to {success: false, error: "album not found"}
+                set response to {success: false, |error|: "album not found"}
             end if
         on error
             -- Likely doesn't exist
-            set response to {success: false, error: "error deleting"}
+            set response to {success: false, |error|: "error deleting"}
         end try
 
         tell jsonLib

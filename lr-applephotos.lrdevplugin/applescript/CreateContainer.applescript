@@ -41,7 +41,7 @@ on run argv
                 end
             end if
         on error
-            set response to {success: false, error: "unknown"}
+            set response to {success: false, |error|: "unknown"}
         end try
 
         set response to {n: name of newContainer, i: id of newContainer, success: true}

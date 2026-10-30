@@ -24,10 +24,10 @@ on run argv
                 set name of existingAlbum to newName
                 set response to {success: true}
             else 
-                set response to {success: false, error: "albumID not found"}
+                set response to {success: false, |error|: "albumID not found"}
             end if
         on error
-            set response to {success: false, error: "error during rename"}
+            set response to {success: false, |error|: "error during rename"}
         end try
 
         tell jsonLib

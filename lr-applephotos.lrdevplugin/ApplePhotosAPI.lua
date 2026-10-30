@@ -185,12 +185,14 @@ function ApplePhotosAPI.queryFolderStructure(propertyTable)
         local success, result = invokeScript("GetFolderStructure")
 
         if success then
-            propertyTable.folderStructure = result
+            local folderStructure = result.structure
 
-            local flattenedList = flattenFolderTree(result)
+            propertyTable.folderStructure = folderStructure
+
+            local flattenedList = flattenFolderTree(folderStructure)
             propertyTable.folderList = flattenedList
 
-            local albumMap = albumsByFolder(result)
+            local albumMap = albumsByFolder(folderStructure)
             propertyTable.albumMap = albumMap
 
             -- set defaults
