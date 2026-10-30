@@ -65,7 +65,7 @@ end
 -- Local helper functions
 
 local function updateCantExportAndHelptext(propertyTable)
-    logger:info("updateCantExportAndHelptext")
+    logger:debug(">> updateCantExportAndHelptext")
 
     -- if we're scanning flag that and stop
     if propertyTable.scanningFolders then
@@ -107,19 +107,19 @@ local function updateCantExportAndHelptext(propertyTable)
 end
 
 local function findAllImagesInHierarchy(root, photoIds)
-    logger:info("findAllImagesInHierarchy")
+    logger:debug(">> findAllImagesInHierarchy")
 
     if root:type() == "LrPublishedCollection" then
-        logger:info(root:getName() .. " - type is collection")
+        logger:debug(root:getName() .. " - type is collection")
 
         local photos = root:getPublishedPhotos()
-        logger:info("photo count: " .. #photos)
+        logger:debug("photo count: " .. #photos)
 
         for _, photo in ipairs(photos) do
             table.insert(photoIds, photo:getRemoteId())
         end
     elseif root:type() == "LrPublishedCollectionSet" then
-        logger:info(root:getName() .. " - type is collectionset")
+        logger:debug(root:getName() .. " - type is collectionset")
 
         local children = root:getChildren()
         for _, child in ipairs(children) do
@@ -131,7 +131,11 @@ end
 -- Export/Publish service implementation
 
 function exportServiceProvider.startDialog(propertyTable)
-    logger:info("startDialog: " .. tostring(not not propertyTable.LR_isExportForPublish))
+    if utils.nilOrEmpty(propertyTable.LR_isExportForPublish) then
+        logger:info(">> startDialog: EXPORT")
+    else
+        logger:info(">> startDialog: PUBLISH")
+    end
 
     if propertyTable.LR_isExportForPublish then
         propertyTable:addObserver('selectedFolder', function() updateCantExportAndHelptext(propertyTable) end)
@@ -141,6 +145,7 @@ function exportServiceProvider.startDialog(propertyTable)
         propertyTable:addObserver('newAlbumName', function() updateCantExportAndHelptext(propertyTable) end)
     end
     propertyTable:addObserver('scanningFolders', function() updateCantExportAndHelptext(propertyTable) end)
+
     updateCantExportAndHelptext(propertyTable)
 
     propertyTable.folderList = {}
@@ -152,7 +157,11 @@ function exportServiceProvider.startDialog(propertyTable)
 end
 
 function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
-    logger:info("sectionsForTopOfDialog")
+    if utils.nilOrEmpty(propertyTable.LR_isExportForPublish) then
+        logger:info(">> sectionsForTopOfDialog: EXPORT")
+    else
+        logger:info(">> sectionsForTopOfDialog: PUBLISH")
+    end
 
     if propertyTable.LR_isExportForPublish then
         return {
@@ -306,14 +315,12 @@ function exportServiceProvider.sectionsForTopOfDialog(f, propertyTable)
 end
 
 function exportServiceProvider.processRenderedPhotos(functionContext, exportContext)
-    logger:info("Starting export")
+    logger:info(">> processRenderedPhotos")
+
     local exportSession = exportContext.exportSession
     local exportSettings = assert(exportContext.propertyTable)
     local publishService = exportContext.publishService
     local nPhotos = exportSession:countRenditions()
-
-    -- logger:info("context:")
-    -- logger:info(utils.serialiseVar(exportContext))
 
     -- Set progress title.
     local progressScope = exportContext:configureProgress {
@@ -346,7 +353,7 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
             end
         end
         if not targetAlbumID then
-            logger:info("Creating target album")
+            logger:debug("Need to create target album")
             -- we need to figure out where to create the new album, default to the publish root
             local albumParentID = rootFolderID
 
@@ -382,12 +389,12 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
 
     assert(targetAlbumID, "Target album does not exist/cannot be created")
 
-    logger:info("Ready to export to: " .. targetAlbumID)
+    logger:info("Starting export to: " .. targetAlbumID)
 
     local idsToDelete = {}
 
     for _, rendition in exportContext:renditions { stopIfCanceled = true } do
-        logger:info("Processing image: " .. rendition.photo.localIdentifier)
+        logger:debug("Processing image: " .. rendition.photo.localIdentifier)
         if not rendition.wasSkipped then
             local success, pathOrMessage = rendition:waitForRender()
             if progressScope:isCanceled() then break end
@@ -399,16 +406,16 @@ function exportServiceProvider.processRenderedPhotos(functionContext, exportCont
                         -- we add the remote ID to a list to be deleted, the new version of the image will be
                         -- imported below prior to the deletion, but the remote ID will be updated there so order
                         -- doesn't matter in this case
-                        logger:info("Rendition has remote image ID: " .. existingImageID)
+                        logger:debug("Rendition has existing remote image ID, will delete and replace: " ..
+                            existingImageID)
                         idsToDelete[#idsToDelete + 1] = existingImageID
                     end
                 end
 
                 local imageID = ApplePhotosAPI.importPhoto(targetAlbumID, pathOrMessage)
-                logger:info("Import OK: " .. imageID)
+                logger:debug("Import OK, remote identifier is: " .. imageID)
 
                 if publishService then
-                    logger:info("Setting remote photo ID: " .. imageID)
                     rendition:recordPublishedPhotoId(imageID)
                 end
             end
@@ -423,7 +430,7 @@ end
 -- Publish service implementation
 
 function exportServiceProvider.deletePhotosFromPublishedCollection(publishSettings, arrayOfPhotoIds, deletedCallback)
-    logger:info("deletePhotosFromPublishedCollection")
+    logger:info(">> deletePhotosFromPublishedCollection")
 
     local deletedIDs = ApplePhotosAPI.deleteImages(arrayOfPhotoIds)
     for _, photoId in ipairs(deletedIDs) do
@@ -432,7 +439,7 @@ function exportServiceProvider.deletePhotosFromPublishedCollection(publishSettin
 end
 
 function exportServiceProvider.renamePublishedCollection(publishSettings, info)
-    logger:info("renamePublishedCollection")
+    logger:info(">> renamePublishedCollection")
 
     local pc = info.publishedCollection
 
@@ -456,7 +463,7 @@ end
 -- This is invoked on creation or rename of a published collection set.
 -- Rename also invokes renamePublishedCollection, so we only handle creation here.
 function exportServiceProvider.updateCollectionSetSettings(publishSettings, info)
-    logger:info("updateCollectionSetSettings")
+    logger:info(">> updateCollectionSetSettings")
 
     local pc = info.publishedCollection
     local folderName = info.name
@@ -469,20 +476,20 @@ function exportServiceProvider.updateCollectionSetSettings(publishSettings, info
             baseFolderID = directAncestor.remoteCollectionId
         end
 
-        logger:info("baseFolderID: " .. baseFolderID)
-
+        logger:debug("Parent folder for new folder: " .. baseFolderID)
         assert(baseFolderID, "baseFolderID is nil")
+
         local newFolderID = ApplePhotosAPI.createFolder(folderName, baseFolderID)
 
         LrApplication.activeCatalog():withWriteAccessDo("RecordCollectionSetID", function(context)
             pc:setRemoteId(newFolderID)
-            logger:info("created new folder: " .. folderName .. " at " .. newFolderID)
+            logger:info("Created new folder: " .. folderName .. " at " .. newFolderID)
         end)
     end
 end
 
 function exportServiceProvider.reparentPublishedCollection(publishSettings, info)
-    logger:info("reparentPublishedCollection")
+    logger:info(">> reparentPublishedCollection")
 
     if info.remoteId then
         local target = info.remoteId
@@ -500,7 +507,7 @@ function exportServiceProvider.reparentPublishedCollection(publishSettings, info
 end
 
 function exportServiceProvider.deletePublishedCollection(publishSettings, info)
-    logger:info("deletePublishedCollection")
+    logger:info(">> deletePublishedCollection")
 
     -- this is called for deletion of collections and collection sets, so need to handle
     -- the general case of deleting a tree of collections and images
@@ -525,23 +532,19 @@ function exportServiceProvider.deletePublishedCollection(publishSettings, info)
         local photosToDelete = {}
         findAllImagesInHierarchy(pc, photosToDelete)
         if utils.nilOrEmpty(photosToDelete) then
-            logger:info("no images found in hierarchy")
+            logger:debug("No images found in hierarchy")
         else
-            logger:info("deleting " .. #photosToDelete .. " images")
+            logger:debug("Deleting " .. #photosToDelete .. " images from hierarchy")
             ApplePhotosAPI.deleteImages(photosToDelete)
         end
 
         -- now delete the root thing, whether it's a collection or collection set
         if pc:type() == "LrPublishedCollection" then
-            logger:info("type is collection")
-
             local success = ApplePhotosAPI.deleteAlbum(info.remoteId)
             if not success then
                 error("Unable to delete album: " .. info.remoteId)
             end
         else
-            logger:info("type is collectionset")
-
             local success = ApplePhotosAPI.deleteFolder(info.remoteId)
             if not success then
                 error("Unable to delete folder: " .. info.remoteId)
@@ -551,7 +554,7 @@ function exportServiceProvider.deletePublishedCollection(publishSettings, info)
 end
 
 function exportServiceProvider.goToPublishedPhoto(publishSettings, info)
-    logger:info("goToPublishedPhoto")
+    logger:info(">> goToPublishedPhoto")
 
     local photoID = info.remoteId
     if not utils.nilOrEmpty(photoID) then
@@ -560,7 +563,7 @@ function exportServiceProvider.goToPublishedPhoto(publishSettings, info)
 end
 
 function exportServiceProvider.goToPublishedCollection(publishSettings, info)
-    logger:info("goToPublishedCollection")
+    logger:info(">> goToPublishedCollection")
 
     local albumID = info.remoteId
     if not utils.nilOrEmpty(albumID) then

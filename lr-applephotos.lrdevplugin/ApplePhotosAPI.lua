@@ -80,7 +80,7 @@ local function genericInvoke(name, commandFormatter)
 
     local command = commandFormatter(tempOutputFile)
 
-    logger:info("Invoking shell command: " .. command)
+    logger:debug("Invoking shell command: " .. command)
     local resultCode = LrTasks.execute(command)
     local result = nil
     if resultCode == 0 then
@@ -107,7 +107,7 @@ local function genericInvoke(name, commandFormatter)
                 logger:error("Script reported error, continuing: " .. utils.withDefault(result.error, "unknown error"))
             end
 
-            logger:info("Completed execution of command: " .. name)
+            logger:debug("Completed execution of command: " .. name)
             return success, result
         else
             utils.logAndFail(logger, "Unable to read output file: " .. tempOutputFile)
@@ -175,9 +175,12 @@ local function invokeSwift(command, ...)
 end
 
 ------
+-- START OF API METHODS
+
+------
 -- Query the folder structure from Photos and write it into the local context. Gets all folders and albums currently defined.
 function ApplePhotosAPI.queryFolderStructure(propertyTable)
-    logger:info("updateFolderStructure")
+    logger:info(">> updateFolderStructure")
 
     propertyTable.scanningFolders = true
 
@@ -213,7 +216,7 @@ end
 -- Imports a single photo. Takes the albumId to add it to, and the path of the image to import.
 function ApplePhotosAPI.importPhoto(albumId, photoPath)
     -- must be called from with a task
-    logger:info("importPhoto | " .. albumId .. " | " .. photoPath)
+    logger:info(">> importPhoto | " .. albumId .. " | " .. photoPath)
 
     local success, result = invokeScript("ImportPhoto", albumId, photoPath)
 
@@ -230,7 +233,7 @@ end
 -- Creates a new Album in the Photos hierachy. Name is (seemingly) any string, folderID should have previously been obtained via queryFolderStructure().
 function ApplePhotosAPI.createAlbum(albumName, folderID)
     -- must be called from with a task
-    logger:info("createAlbum | " .. albumName .. " | " .. folderID)
+    logger:info(">> createAlbum | " .. albumName .. " | " .. folderID)
 
     local parentPath = ""
     if folderID ~= "root" then
@@ -257,7 +260,7 @@ end
 -- Creates a new Folder in the Photos hierachy. Name is (seemingly) any string, folderID should have previously been obtained via queryFolderStructure().
 function ApplePhotosAPI.createFolder(folderName, folderID)
     -- must be called from with a task
-    logger:info("createFolder | " .. folderName .. " | " .. folderID)
+    logger:info(">> createFolder | " .. folderName .. " | " .. folderID)
 
     local parentPath = ""
     if folderID ~= "root" then
@@ -284,7 +287,7 @@ end
 -- If found, returns the current name. If not, returns false.
 function ApplePhotosAPI.checkAlbumExists(albumID, rootFolderID)
     -- must be called from with a task
-    logger:info("checkAlbumExists | " .. albumID .. " | " .. (rootFolderID or "nil"))
+    logger:info(">> checkAlbumExists | " .. albumID .. " | " .. (rootFolderID or "nil"))
 
     local success, result = invokeScript("CheckAlbumExists", albumID, rootFolderID)
 
@@ -302,7 +305,7 @@ end
 -- NOTE: Photos will prompt the user for confirmation once per execution, this is unavoidable.
 function ApplePhotosAPI.deleteImages(imageIDs)
     -- must be called from with a task
-    logger:info("deleteImages | " .. table.concat(imageIDs, " "))
+    logger:info(">> deleteImages | " .. table.concat(imageIDs, " "))
 
     local success, result = invokeSwift("delete-images", unpack(imageIDs))
 
@@ -322,7 +325,7 @@ end
 -- Renames a given album. Returns boolean success flag.
 function ApplePhotosAPI.renameAlbum(albumID, newName)
     -- must be called from with a task
-    logger:info("renameAlbum | " .. albumID .. " | " .. newName)
+    logger:info(">> renameAlbum | " .. albumID .. " | " .. newName)
 
     local success, result = invokeScript("RenameAlbum", albumID, newName)
 
@@ -339,7 +342,7 @@ end
 -- Renames a given folder. Returns boolean success flag.
 function ApplePhotosAPI.renameFolder(folderID, newName)
     -- must be called from with a task
-    logger:info("renameFolder | " .. folderID .. " | " .. newName)
+    logger:info(">> renameFolder | " .. folderID .. " | " .. newName)
 
     local folderPath = ""
     if folderID ~= "root" then
@@ -366,7 +369,7 @@ end
 -- Nil result indicates not found.
 function ApplePhotosAPI.findFolder(folderID)
     -- must be called from with a task
-    logger:info("findFolder | " .. folderID)
+    logger:info(">> findFolder | " .. folderID)
 
     local success, result = invokeScript("FindFolder", folderID)
 
@@ -384,7 +387,7 @@ end
 -- @return true if successful
 function ApplePhotosAPI.deleteFolder(folderID)
     -- must be called from with a task
-    logger:info("deleteFolder | " .. folderID)
+    logger:info(">> deleteFolder | " .. folderID)
 
     if folderID == "root" then
         error("Invalid folderID: " .. folderID)
@@ -406,7 +409,7 @@ end
 -- @return true if successful
 function ApplePhotosAPI.deleteAlbum(albumID)
     -- must be called from with a task
-    logger:info("deleteAlbum | " .. albumID)
+    logger:info(">> deleteAlbum | " .. albumID)
 
     local success, result = invokeScript("DeleteAlbum", albumID)
 
@@ -425,7 +428,7 @@ end
 -- @return true if successful
 function ApplePhotosAPI.moveCollection(collectionID, parentID)
     -- must be called from within a task
-    logger:info("moveCollection | " .. collectionID .. " | " .. parentID)
+    logger:info(">> moveCollection | " .. collectionID .. " | " .. parentID)
 
     local success, result = invokeSwift("move", collectionID, parentID)
 
@@ -442,7 +445,7 @@ end
 -- @return true if successful
 function ApplePhotosAPI.displayPhoto(photoID)
     -- must be called from within a task
-    logger:info("displayPhoto | " .. photoID)
+    logger:info(">> displayPhoto | " .. photoID)
 
     local success, result = invokeScript("GotoPhoto", photoID)
 
@@ -459,7 +462,7 @@ end
 -- @return true if successful
 function ApplePhotosAPI.displayAlbum(albumID)
     -- must be called from within a task
-    logger:info("displayAlbum | " .. albumID)
+    logger:info(">> displayAlbum | " .. albumID)
 
     local success, result = invokeScript("GotoAlbum", albumID)
 
