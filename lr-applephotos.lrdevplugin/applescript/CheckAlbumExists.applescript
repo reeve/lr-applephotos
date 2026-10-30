@@ -1,6 +1,6 @@
 
 -- checks whether an album exists, and returns it's name if so
--- parameters: <album id>
+-- parameters: <album id> <optional root folder id>
 on run argv
     tell application "Finder"
         -- Get the parent folder of the running script
@@ -10,7 +10,7 @@ on run argv
     set jsonLib to load script file jsonLibPath
 
     if length of argv is less than 1 or length of argv is greater than 2 then
-        error "invalid arguments" number 1
+        error "invalid arguments" number 22 -- invalid argument
     end if
 
     set albumId to item 1 of argv
@@ -23,7 +23,7 @@ on run argv
         try
             set existingAlbum to album id albumId
             if existingAlbum is not missing value then
-                set response to {n: name of existingAlbum, i: id of existingAlbum}
+                set response to {n: name of existingAlbum, i: id of existingAlbum, success: true}
                 if rootFolderId is not missing value then
                     set found to false
                     set p to a reference to (parent of existingAlbum)
@@ -36,15 +36,15 @@ on run argv
                     end repeat
                     if not found
                         -- specified root not found in parent hierarchy, treat as not found
-                        set response to {}
+                        set response to {success: false, error: "found, but not a child of specified root folder"}
                     end if
                 end if
             else 
-                set response to {}
+                set response to {success: false, error: "not found"}
             end if
         on error
             -- Likely doesn't exist
-            set response to {}
+                set response to {success: false, error: "unknown"}
         end try
 
         tell jsonLib

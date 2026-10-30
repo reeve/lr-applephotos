@@ -1,5 +1,3 @@
--- set targetFile to POSIX file "/Users/adamreeve/src/lr-applephotos/lr-applephotos.lrdevplugin/applescript/JSONlib.scpt"
--- set jsonLib to load script targetFile
 
 on run argv
     tell application "Finder"
@@ -10,7 +8,7 @@ on run argv
     set jsonLib to load script file jsonLibPath
 
     if length of argv is not 2 then
-        error "invalid arguments" number 1
+        error "invalid arguments" number 22 -- invalid argument
     end if
 
     set albumId to item 1 of argv
@@ -19,19 +17,24 @@ on run argv
     try 
         set imageAlias to (POSIX file imagePath) as alias
     on error
-        error "unable to create alias" number 4
+        error "unable to create alias" number 2 -- file not found
     end try
 
     tell application "Photos"
-        try 
-            set targetAlbum to album id albumId
-        on error
-            error "album not found" number 2          
-        end try
+        set targetAlbum to album id albumId
 
-        set imagerecords to import imageAlias into targetAlbum with skip check duplicates
-        set imagerecord to item 1 of imagerecords 
-        set response to {fn: filename of imagerecord, i: id of imagerecord}
+        if targetAlbum is not missing value then
+            try 
+                set imagerecords to import imageAlias into targetAlbum with skip check duplicates
+                set imagerecord to item 1 of imagerecords 
+                set response to {success: true, fn: filename of imagerecord, i: id of imagerecord}
+            on error
+                set response to {success: false, error: "error during import"}
+            end try
+        else 
+            set response to {success: false, error: "targetAlbum not found"}
+        end
+
         tell jsonLib
             set jsonResponse to jsonLib's convertASToJSON:response saveTo:missing value
         end tell

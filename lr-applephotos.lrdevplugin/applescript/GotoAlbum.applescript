@@ -10,7 +10,7 @@ on run argv
     set jsonLib to load script file jsonLibPath
 
     if length of argv is not 1 then
-        error "invalid arguments" number 1
+        error "invalid arguments" number 22 -- invalid argument
     end if
 
     set albumID to item 1 of argv
@@ -21,13 +21,12 @@ on run argv
 
             if targetAlbum is not missing value then
             	spotlight targetAlbum
-                set response to {status: "ok"}
+                set response to {success: true}
             else 
-                set response to {status: "not found"}
+                set response to {success: false, error: "not found"}
             end if
         on error
-            -- Likely doesn't exist
-            set response to {status: "error"}
+            set response to {success: false, error: "error thrown trying to spotlight"}
         end try
 
         tell jsonLib

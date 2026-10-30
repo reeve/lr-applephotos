@@ -62,3 +62,4 @@
 - [x] Is it possible to implement "go to" in the photos UI?
 - [ ] Review error handling, logging, etc
 - [ ] Idea - put a standard check in both applescript and swift libs to check mutations are within publishroot
+- [ ] Fix swift path

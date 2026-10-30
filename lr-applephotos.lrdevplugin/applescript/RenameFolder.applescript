@@ -11,7 +11,7 @@ on run argv
     set utilsLib to load script file utilsLibPath
 
     if length of argv is not 2 then
-        error "invalid arguments" number 1
+        error "invalid arguments" number 22 -- invalid argument
     end if
 
     set folderPath to item 1 of argv
@@ -23,13 +23,12 @@ on run argv
 
             if existingFolder is not missing value then
                 set name of existingFolder to newName
-                set response to {status: "ok"}
+                set response to {success: true}
             else 
-                set response to {status: "not found"}
+                set response to {success: false, error: "folderPath not found"}
             end if
         on error
-            -- Likely doesn't exist
-            set response to {status: "not found"}
+            set response to {success: false, error: "error during rename"}
         end try
 
         tell jsonLib

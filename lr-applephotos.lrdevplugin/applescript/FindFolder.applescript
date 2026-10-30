@@ -6,14 +6,18 @@ on run argv
     set jsonLibPath to currentDirectory & "JSONlib.scpt"
     set jsonLib to load script file jsonLibPath
 
+    if length of argv is not 1 then
+        error "invalid arguments" number 22 -- invalid argument
+    end if
+
     tell application "Photos"
         set targetFolderID to item 1 of argv
 
         set searchResult to my recurseFolders(application "Photos", {}, targetFolderID)
         if searchResult is missing value then
-            set response to {status: "not found", target: targetFolderID}
+            set response to {success: false, error: "not found", target: targetFolderID}
         else
-            set response to {status: "ok", target: targetFolderID, |path|: searchResult}
+            set response to {success: true, target: targetFolderID, |path|: searchResult}
         end if
 
         tell jsonLib

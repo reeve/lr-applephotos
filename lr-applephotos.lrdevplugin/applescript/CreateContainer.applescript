@@ -13,7 +13,7 @@ on run argv
     set utilsLib to load script file utilsLibPath
 
     if length of argv is not 3 then
-        error "invalid arguments" number 1
+        error "invalid arguments" number 22 -- invalid argument
     end if
 
     set containerName to item 1 of argv
@@ -21,26 +21,31 @@ on run argv
     set parentPath to item 3 of argv
 
     if containerType is not "album" and containerType is not "folder" then
-        error "invalid containerType" number 1
+        error "invalid containerType" number 22 -- invalid argument
     end if
 
     tell application "Photos"
-        if parentPath is "" then
-            if containerType is "album" then
-                set newContainer to make new album named containerName
-            else if containerType is "folder" then
-                set newContainer to make new folder named containerName
-            end
-        else        
-            set parentFolder to utilsLib's locateFolderFromPath(parentPath)
-            if containerType is "album" then
-                set newContainer to make new album named containerName at parentFolder
-            else if containerType is "folder" then
-                set newContainer to make new folder named containerName at parentFolder
-            end
-        end if
+        try 
+            if parentPath is "" then
+                if containerType is "album" then
+                    set newContainer to make new album named containerName
+                else if containerType is "folder" then
+                    set newContainer to make new folder named containerName
+                end
+            else        
+                set parentFolder to utilsLib's locateFolderFromPath(parentPath)
+                if containerType is "album" then
+                    set newContainer to make new album named containerName at parentFolder
+                else if containerType is "folder" then
+                    set newContainer to make new folder named containerName at parentFolder
+                end
+            end if
+        on error
+            set response to {success: false, error: "unknown"}
+        end try
 
-        set response to {n: name of newContainer, i: id of newContainer}
+        set response to {n: name of newContainer, i: id of newContainer, success: true}
+        
         tell jsonLib
             set jsonResponse to jsonLib's convertASToJSON:response saveTo:missing value
         end tell

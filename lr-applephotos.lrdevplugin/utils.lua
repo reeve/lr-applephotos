@@ -42,6 +42,14 @@ function utils.nilOrEmpty(val)
     return false
 end
 
+function utils.withDefault(val, default)
+    if utils.nilOrEmpty(val) then
+        return default
+    else
+        return val
+    end
+end
+
 function utils.array_contains(arr, target)
     for _, value in ipairs(arr) do
         if value == target then
@@ -80,26 +88,35 @@ function utils.serialiseVar(value, indent)
         end
         table.insert(parts, indent .. "}")
         return table.concat(parts)
-
-        -- local parts = {}
-        -- table.insert(parts, "{\n")
-        -- local nextIndent = indent .. "  "
-        -- for k, v in value:pairs() do
-        --     local key
-        --     if type(k) == "string" then
-        --         key = string.format("%q", k)
-        --     else
-        --         key = tostring(k)
-        --     end
-        --     table.insert(parts, nextIndent .. "[" .. key .. "] = " .. utils.serialiseVar(v, nextIndent) .. ",\n")
-        -- end
-        -- table.insert(parts, indent .. "}")
-        -- return table.concat(parts)
     elseif t == "string" then
         return string.format("%q", value)
     else
         return tostring(value)
     end
+end
+
+function utils.array_difference(array1, array2)
+    local lookup = {}
+    local diff = {}
+
+    -- Map elements of array2 as keys for fast O(1) lookups
+    for _, value in ipairs(array2) do
+        lookup[value] = true
+    end
+
+    -- Check if elements from array1 are missing in array2
+    for _, value in ipairs(array1) do
+        if not lookup[value] then
+            table.insert(diff, value)
+        end
+    end
+
+    return diff
+end
+
+function utils.logAndFail(logger, message)
+    logger:error(message)
+    error(message)
 end
 
 return utils

@@ -7,7 +7,7 @@ set jsonLib to load script file jsonLibPath
 
 tell application "Photos"
     set children to my recurseFolders(application "Photos")
-    set response to {{n: "Root", i: "root", c: children, t: "f"}}
+    set response to {success: true, {n: "Root", i: "root", c: children, t: "f"}}
     tell jsonLib
         set jsonResponse to jsonLib's convertASToJSON:response saveTo:missing value
     end tell
